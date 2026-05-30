@@ -14,15 +14,19 @@ client = OpenAI(
 
 app = FastAPI()
 
-# Хранилище последнего сгенерированного сайта
+PASSWORD = "123098123098"  # Поменяй на свой пароль
 last_site = {"html": ""}
 
 class SiteRequest(BaseModel):
     description: str
+    password: str
 
 @app.post("/generate")
 def generate_site(req: SiteRequest):
     global last_site
+    if req.password != PASSWORD:
+        return {"error": "Неверный пароль"}
+    
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
@@ -45,7 +49,6 @@ def generate_site(req: SiteRequest):
     )
 
     raw = response.choices[0].message.content.strip()
-
     if "```html" in raw:
         html = raw.split("```html")[1].split("```")[0].strip()
     elif "```" in raw:
@@ -71,34 +74,44 @@ def home():
         <title>Генератор сайтов</title>
         <script src="https://cdn.tailwindcss.com"></script>
     </head>
-    <body class="bg-gray-900 text-white min-h-screen flex items-center justify-center">
+    <body class="bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 text-white min-h-screen flex items-center justify-center">
         <div class="text-center max-w-lg w-full px-4">
-            <h1 class="text-4xl font-bold mb-2">🚀 Генератор сайтов</h1>
-            <p class="text-gray-400 mb-6">Опиши сайт — и он появится</p>
+            <div class="text-6xl mb-4">🚀</div>
+            <h1 class="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Генератор сайтов</h1>
+            <p class="text-gray-300 mb-6">Опиши сайт — и он появится за секунды</p>
+            <input id="password" type="password" placeholder="Пароль"
+                   class="w-full p-4 rounded-xl bg-gray-800 border border-gray-700 text-white mb-3
+                          focus:outline-none focus:ring-2 focus:ring-purple-500">
             <input id="desc" type="text" placeholder="Например: сайт кофейни с меню и отзывами"
                    class="w-full p-4 rounded-xl bg-gray-800 border border-gray-700 text-white mb-4
-                          focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          focus:outline-none focus:ring-2 focus:ring-purple-500">
             <button onclick="generate()"
-                    class="w-full p-4 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold text-lg transition">
+                    class="w-full p-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl font-bold text-lg transition shadow-lg">
                 Создать сайт
             </button>
             <p id="status" class="mt-4 text-gray-400"></p>
         </div>
         <script>
             async function generate() {
+                const password = document.getElementById('password').value;
                 const desc = document.getElementById('desc').value;
                 const status = document.getElementById('status');
                 if (!desc) { status.textContent = 'Введи описание!'; return; }
+                if (!password) { status.textContent = 'Введи пароль!'; return; }
                 status.textContent = 'Генерирую...';
                 try {
                     const res = await fetch('/generate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ description: desc })
+                        body: JSON.stringify({ description: desc, password: password })
                     });
                     const data = await res.json();
-                    window.open('/view', '_blank');
-                    status.textContent = 'Готово! Сайт открыт в новой вкладке.';
+                    if (data.error) {
+                        status.textContent = 'Ошибка: ' + data.error;
+                    } else {
+                        window.open('/view', '_blank');
+                        status.textContent = 'Готово! Сайт открыт в новой вкладке.';
+                    }
                 } catch (e) {
                     status.textContent = 'Ошибка: ' + e.message;
                 }
