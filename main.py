@@ -14,7 +14,7 @@ client = OpenAI(
 
 app = FastAPI()
 
-PASSWORD = "123098123098"
+PASSWORD = "123098123098"  # Твой пароль
 last_site = {"html": ""}
 
 class SiteRequest(BaseModel):
@@ -78,6 +78,8 @@ def home():
         <style>
             #preview-frame { width: 100%; height: 70vh; border: none; border-radius: 12px; display: none; }
             #preview-container { display: none; margin-top: 20px; }
+            .copy-btn { background: #10b981; color: white; padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer; border: none; }
+            .copy-btn:hover { background: #059669; }
         </style>
     </head>
     <body class="bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 text-white min-h-screen">
@@ -99,12 +101,17 @@ def home():
             <div id="preview-container">
                 <div class="flex justify-between items-center mb-2">
                     <span class="text-sm text-gray-400">Предпросмотр:</span>
-                    <button onclick="closePreview()" class="text-red-400 text-sm">✕ Закрыть</button>
+                    <div>
+                        <button onclick="copyCode()" class="copy-btn mr-2">📋 Копировать HTML</button>
+                        <button onclick="closePreview()" class="text-red-400 text-sm">✕ Закрыть</button>
+                    </div>
                 </div>
                 <iframe id="preview-frame"></iframe>
             </div>
         </div>
         <script>
+            let currentHtml = '';
+            
             async function generate() {
                 const password = document.getElementById('password').value;
                 const desc = document.getElementById('desc').value;
@@ -126,20 +133,34 @@ def home():
                     if (data.error) {
                         status.textContent = 'Ошибка: ' + data.error;
                     } else {
+                        currentHtml = data.html;
                         frame.style.display = 'block';
                         container.style.display = 'block';
                         frame.srcdoc = data.html;
-                        status.textContent = 'Готово! Сайт показан ниже.';
+                        status.textContent = 'Готово! Можешь скопировать HTML-код.';
                     }
                 } catch (e) {
                     status.textContent = 'Ошибка: ' + e.message;
                 }
             }
             
+            function copyCode() {
+                if (!currentHtml) {
+                    alert('Сначала создай сайт!');
+                    return;
+                }
+                navigator.clipboard.writeText(currentHtml).then(() => {
+                    const btn = document.querySelector('.copy-btn');
+                    btn.textContent = '✅ Скопировано!';
+                    setTimeout(() => { btn.textContent = '📋 Копировать HTML'; }, 2000);
+                });
+            }
+            
             function closePreview() {
                 document.getElementById('preview-frame').style.display = 'none';
                 document.getElementById('preview-container').style.display = 'none';
                 document.getElementById('status').textContent = '';
+                currentHtml = '';
             }
         </script>
     </body>
