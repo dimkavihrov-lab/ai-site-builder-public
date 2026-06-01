@@ -103,7 +103,7 @@ def home():
             .site-card:hover { background: rgba(255,255,255,0.1); transform: translateX(4px); }
             .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; }
             .modal.active { display: flex; }
-            .modal-content { background: #1e1b4b; border-radius: 16px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); }
+            .modal-content { background: #0f0d2e; border-radius: 16px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); }
         </style>
     </head>
     <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
@@ -142,10 +142,10 @@ def home():
                 <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
                     <span class="text-sm text-gray-300">Предпросмотр</span>
                     <div class="flex gap-1 flex-wrap">
-                        <button onclick="saveToGallery()" class="btn-success text-xs">💾</button>
-                        <button onclick="downloadHTML()" class="btn-download text-xs">📥</button>
-                        <button onclick="copyCode()" class="btn-success text-xs">📋</button>
-                        <button onclick="closePreview()" class="text-red-400 text-lg px-2 hover:text-red-300 leading-none">✕</button>
+                        <button onclick="saveToGallery()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">💾</button>
+                        <button onclick="downloadHTML()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">📥</button>
+                        <button onclick="copyCode()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">📋</button>
+                        <button onclick="closePreview()" class="text-gray-500 hover:text-red-400 text-lg px-2 leading-none transition">✕</button>
                     </div>
                 </div>
                 <iframe id="preview-frame"></iframe>
@@ -206,7 +206,7 @@ def home():
                     <p>Мы создаём красивые адаптивные заготовки для сайтов за секунды. Вам остаётся только заменить текст и изображения.</p>
                     <p>Идеально для верстальщиков, фрилансеров и студентов.</p>
                     <p class="text-gray-500 mt-3">Версия: 1.0</p>
-                    <p class="text-gray-500">Сделано с ❤️ и 🚀</p>
+                    <p class="text-gray-500">Сделано с ❤️</p>
                 </div>
             </div>
         </div>
