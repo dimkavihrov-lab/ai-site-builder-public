@@ -96,7 +96,7 @@ def home():
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
-            #preview-frame { width: 100%; height: 70vh; border: none; border-radius: 12px; display: none; background: transparent; }
+            #preview-frame { width: 100%; height: 70vh; border: none; border-radius: 12px; display: none; background: white; }
             #preview-container { display: none; margin-top: 20px; animation: fadeIn 0.3s ease; }
             @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
             @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
