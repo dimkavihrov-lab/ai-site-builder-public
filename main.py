@@ -21,6 +21,16 @@ class SiteRequest(BaseModel):
     description: str
     password: str
 
+class EditRequest(BaseModel):
+    html: str
+    old_text: str
+    new_text: str
+
+@app.post("/edit")
+def edit_html(req: EditRequest):
+    new_html = req.html.replace(req.old_text, req.new_text)
+    return {"html": new_html}
+
 @app.post("/generate")
 def generate_site(req: SiteRequest):
     global last_site
@@ -33,9 +43,9 @@ def generate_site(req: SiteRequest):
             {
                 "role": "system",
                 "content": (
-                    "Ты генератор сайтов. Пользователь описывает, какой сайт нужен. "
-                    "Создай КРАСИВЫЙ современный адаптивный одностраничный сайт на HTML с Tailwind CSS (подключи через CDN). "
-                    "Сайт должен быть полностью адаптивным для мобильных устройств (используй responsive классы Tailwind: sm:, md:, lg:). "
+                    "Ты генератор HTML-шаблонов. Пользователь описывает, какой шаблон нужен. "
+                    "Создай КРАСИВЫЙ современный адаптивный одностраничный HTML-шаблон с Tailwind CSS (подключи через CDN). "
+                    "Шаблон должен быть полностью адаптивным для мобильных устройств (используй responsive классы Tailwind: sm:, md:, lg:). "
                     "Не допускай горизонтальной прокрутки на телефонах. Используй max-width: 100vw и overflow-x: hidden на body. "
                     "Используй градиенты, красивые тени, анимации при наведении. "
                     "Отвечай ТОЛЬКО HTML-кодом в ```html ... ```. Без пояснений."
@@ -43,7 +53,7 @@ def generate_site(req: SiteRequest):
             },
             {
                 "role": "user",
-                "content": f"Создай сайт по описанию: {req.description}"
+                "content": f"Создай шаблон по описанию: {req.description}"
             }
         ],
         temperature=0.8,
@@ -73,93 +83,157 @@ def home():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <title>SiteForge — Генератор сайтов</title>
+        <title>SiteForge — Генератор HTML-шаблонов</title>
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
             #preview-frame { width: 100%; height: 70vh; border: none; border-radius: 12px; display: none; background: white; }
             #preview-container { display: none; margin-top: 20px; animation: fadeIn 0.3s ease; }
             @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+            @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            .spinner { animation: spin 1s linear infinite; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #8b5cf6; border-radius: 50%; display: none; margin: 10px auto; }
             .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 10px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; }
-            .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99,102,241,0.4); }
+            .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99,102,241,0.4); }
+            .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
             .btn-success { background: #10b981; color: white; padding: 8px 16px; border-radius: 10px; font-size: 13px; cursor: pointer; border: none; transition: all 0.2s; }
             .btn-success:hover { background: #059669; }
             .btn-download { background: #f59e0b; color: white; padding: 8px 16px; border-radius: 10px; font-size: 13px; cursor: pointer; border: none; transition: all 0.2s; }
             .btn-download:hover { background: #d97706; }
+            .btn-outline { background: transparent; color: #8b5cf6; border: 1px solid #8b5cf6; padding: 8px 16px; border-radius: 10px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+            .btn-outline:hover { background: rgba(139,92,246,0.1); }
             .site-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; backdrop-filter: blur(10px); }
             .site-card:hover { background: rgba(255,255,255,0.1); transform: translateX(4px); }
-            .gallery-section { display: none; margin-top: 30px; animation: fadeIn 0.3s ease; }
+            .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; }
+            .modal.active { display: flex; }
+            .modal-content { background: #1e1b4b; border-radius: 16px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); }
         </style>
     </head>
     <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
-        <div class="max-w-2xl w-full px-4 mx-auto py-8">
+        <div class="max-w-2xl w-full px-4 mx-auto py-6">
             <!-- Header -->
-            <div class="text-center mb-8">
-                <div class="text-6xl mb-3">🚀</div>
-                <h1 class="text-4xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">SiteForge</h1>
-                <p class="text-gray-400 mt-2 text-sm">Создай красивый сайт за секунды с помощью ИИ</p>
+            <div class="text-center mb-6">
+                <div class="text-5xl mb-2">🚀</div>
+                <h1 class="text-3xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">SiteForge</h1>
+                <p class="text-gray-400 mt-1 text-sm">Генератор HTML-шаблонов с помощью ИИ</p>
+                <div class="flex justify-center gap-3 mt-3">
+                    <button onclick="openModal('help')" class="btn-outline text-xs">❓ Помощь</button>
+                    <button onclick="openModal('about')" class="btn-outline text-xs">ℹ️ О нас</button>
+                </div>
             </div>
             
             <!-- Form Card -->
-            <div class="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 shadow-2xl">
+            <div class="bg-white/5 backdrop-blur-lg rounded-2xl p-5 border border-white/10 shadow-2xl">
                 <input id="password" type="password" placeholder="🔑 Пароль"
-                       class="w-full p-3.5 rounded-xl bg-white/5 border border-white/10 text-white mb-3
+                       class="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white mb-3
                               focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm placeholder-gray-500">
-                <input id="desc" type="text" placeholder="💡 Опиши сайт, например: магазин кроссовок с каталогом"
-                       class="w-full p-3.5 rounded-xl bg-white/5 border border-white/10 text-white mb-4
-                              focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm placeholder-gray-500">
-                <button onclick="generate()" class="w-full p-4 btn-primary text-lg">
-                    ✨ Создать сайт
+                <input id="desc" type="text" placeholder="💡 Опиши шаблон, например: лендинг для кофейни"
+                       class="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white mb-4
+                              focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm placeholder-gray-500"
+                       maxlength="500">
+                <button id="generateBtn" onclick="generate()" class="w-full p-4 btn-primary text-lg">
+                    ✨ Создать шаблон
                 </button>
+                <div class="spinner" id="spinner"></div>
                 <p id="status" class="mt-3 text-gray-400 text-xs text-center"></p>
             </div>
             
             <!-- Preview -->
             <div id="preview-container">
-                <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
-                    <span class="text-sm text-gray-300">👁 Предпросмотр</span>
-                    <div class="flex gap-2">
-                        <button onclick="saveToGallery()" class="btn-success">💾 Сохранить</button>
-                        <button onclick="downloadHTML()" class="btn-download">📥 Скачать</button>
-                        <button onclick="copyCode()" class="btn-success">📋 Копировать</button>
-                        <button onclick="closePreview()" class="text-red-400 text-sm hover:text-red-300">✕</button>
+                <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
+                    <span class="text-sm text-gray-300">Предпросмотр</span>
+                    <div class="flex gap-1 flex-wrap">
+                        <button onclick="saveToGallery()" class="btn-success text-xs">💾</button>
+                        <button onclick="downloadHTML()" class="btn-download text-xs">📥</button>
+                        <button onclick="copyCode()" class="btn-success text-xs">📋</button>
+                        <button onclick="closePreview()" class="text-red-400 text-lg px-2 hover:text-red-300 leading-none">✕</button>
                     </div>
                 </div>
                 <iframe id="preview-frame"></iframe>
             </div>
             
             <!-- Gallery -->
-            <div id="gallery-section" class="gallery-section">
+            <div id="gallery-section" style="display:none; margin-top: 30px;">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold">📂 Мои сайты</h2>
-                    <button onclick="clearGallery()" class="text-xs text-gray-500 hover:text-red-400">Очистить всё</button>
+                    <h2 class="text-lg font-bold">📂 Мои шаблоны</h2>
+                    <button onclick="clearGallery()" class="text-xs text-gray-500 hover:text-red-400">Очистить</button>
                 </div>
                 <div id="gallery-list"></div>
             </div>
             
-            <!-- Toggle Gallery Button -->
-            <div class="text-center mt-6">
+            <!-- Gallery Toggle -->
+            <div class="text-center mt-4">
                 <button onclick="toggleGallery()" class="text-sm text-gray-400 hover:text-white transition" id="gallery-toggle">
-                    📂 Показать сохранённые сайты
+                    📂 Сохранённые шаблоны
                 </button>
+            </div>
+            
+            <!-- Google Play -->
+            <div class="text-center mt-6 pb-6">
+                <p class="text-xs text-gray-500">📱 Скоро в Google Play — SiteForge</p>
+            </div>
+        </div>
+
+        <!-- Help Modal -->
+        <div id="help-modal" class="modal">
+            <div class="modal-content">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-lg font-bold">❓ Как пользоваться</h2>
+                    <button onclick="closeModal('help')" class="text-red-400 text-xl leading-none">✕</button>
+                </div>
+                <div class="text-sm text-gray-300 space-y-2">
+                    <p><strong>1.</strong> Введи пароль (получи у администратора).</p>
+                    <p><strong>2.</strong> Опиши шаблон: для кого, какой стиль, какие секции нужны.</p>
+                    <p><strong>3.</strong> Нажми «Создать шаблон» и жди пару секунд.</p>
+                    <p><strong>4.</strong> Сохрани, скачай или скопируй HTML-код.</p>
+                    <p><strong>5.</strong> Открой в любом редакторе и доработай под себя.</p>
+                    <p class="text-gray-500 mt-3"><strong>Примеры запросов:</strong></p>
+                    <p class="text-gray-400">— лендинг для кофейни с меню и отзывами</p>
+                    <p class="text-gray-400">— сайт-визитка фотографа с портфолио</p>
+                    <p class="text-gray-400">— одностраничный магазин кроссовок</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- About Modal -->
+        <div id="about-modal" class="modal">
+            <div class="modal-content">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-lg font-bold">ℹ️ О нас</h2>
+                    <button onclick="closeModal('about')" class="text-red-400 text-xl leading-none">✕</button>
+                </div>
+                <div class="text-sm text-gray-300 space-y-2">
+                    <p><strong>SiteForge</strong> — это генератор HTML-шаблонов с помощью искусственного интеллекта.</p>
+                    <p>Мы создаём красивые адаптивные заготовки для сайтов за секунды. Вам остаётся только заменить текст и изображения.</p>
+                    <p>Идеально для верстальщиков, фрилансеров и студентов.</p>
+                    <p class="text-gray-500 mt-3">Версия: 1.0</p>
+                    <p class="text-gray-500">Сделано с ❤️ и 🚀</p>
+                </div>
             </div>
         </div>
         
         <script>
             let currentHtml = '';
+            let isGenerating = false;
             let gallery = JSON.parse(localStorage.getItem('siteforge_gallery') || '[]');
             
             function generate() {
+                if (isGenerating) return;
                 const password = document.getElementById('password').value;
                 const desc = document.getElementById('desc').value;
                 const status = document.getElementById('status');
                 const frame = document.getElementById('preview-frame');
                 const container = document.getElementById('preview-container');
+                const btn = document.getElementById('generateBtn');
+                const spinner = document.getElementById('spinner');
                 
                 if (!desc) { status.textContent = 'Введи описание!'; return; }
                 if (!password) { status.textContent = 'Введи пароль!'; return; }
                 
+                isGenerating = true;
+                btn.disabled = true;
+                spinner.style.display = 'block';
                 status.textContent = '⚡ Генерирую...';
+                
                 fetch('/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -177,19 +251,23 @@ def home():
                         status.textContent = '✅ Готово!';
                     }
                 })
-                .catch(e => { status.textContent = '❌ Ошибка: ' + e.message; });
+                .catch(e => { status.textContent = '❌ Ошибка: ' + e.message); })
+                .finally(() => {
+                    isGenerating = false;
+                    btn.disabled = false;
+                    spinner.style.display = 'none';
+                    setTimeout(() => { status.textContent = ''; }, 3000);
+                });
             }
             
             function saveToGallery() {
-                if (!currentHtml) { alert('Сначала создай сайт!'); return; }
+                if (!currentHtml) { alert('Сначала создай шаблон!'); return; }
                 const title = document.getElementById('desc').value || 'Без названия';
                 gallery.unshift({ title: title, html: currentHtml, date: new Date().toLocaleString() });
                 if (gallery.length > 50) gallery = gallery.slice(0, 50);
                 localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
                 renderGallery();
-                const status = document.getElementById('status');
-                status.textContent = '💾 Сохранено!';
-                setTimeout(() => { status.textContent = '✅ Готово!'; }, 1500);
+                alert('Сохранено!');
             }
             
             function renderGallery() {
@@ -205,7 +283,7 @@ def home():
                         </div>
                     </div>
                 `).join('');
-                if (gallery.length === 0) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто. Создайте сайт и нажмите «Сохранить».</p>';
+                if (gallery.length === 0) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>';
             }
             
             function loadFromGallery(index) {
@@ -215,11 +293,10 @@ def home():
                 document.getElementById('preview-frame').srcdoc = site.html;
                 document.getElementById('preview-frame').style.display = 'block';
                 document.getElementById('preview-container').style.display = 'block';
-                document.getElementById('status').textContent = '📂 Загружено из галереи';
             }
             
             function deleteFromGallery(index) {
-                if (confirm('Удалить этот сайт из галереи?')) {
+                if (confirm('Удалить?')) {
                     gallery.splice(index, 1);
                     localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
                     renderGallery();
@@ -227,7 +304,7 @@ def home():
             }
             
             function clearGallery() {
-                if (confirm('Удалить ВСЕ сохранённые сайты?')) {
+                if (confirm('Удалить ВСЁ?')) {
                     gallery = [];
                     localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
                     renderGallery();
@@ -239,30 +316,26 @@ def home():
                 const btn = document.getElementById('gallery-toggle');
                 if (section.style.display === 'block') {
                     section.style.display = 'none';
-                    btn.textContent = '📂 Показать сохранённые сайты';
+                    btn.textContent = '📂 Сохранённые шаблоны';
                 } else {
                     section.style.display = 'block';
-                    btn.textContent = '📂 Скрыть сохранённые сайты';
+                    btn.textContent = '📂 Скрыть шаблоны';
                     renderGallery();
                 }
             }
             
             function copyCode() {
-                if (!currentHtml) { alert('Сначала создай сайт!'); return; }
-                navigator.clipboard.writeText(currentHtml).then(() => {
-                    const status = document.getElementById('status');
-                    status.textContent = '📋 Скопировано в буфер обмена!';
-                    setTimeout(() => { status.textContent = '✅ Готово!'; }, 1500);
-                });
+                if (!currentHtml) { alert('Сначала создай шаблон!'); return; }
+                navigator.clipboard.writeText(currentHtml).then(() => alert('Скопировано!'));
             }
             
             function downloadHTML() {
-                if (!currentHtml) { alert('Сначала создай сайт!'); return; }
+                if (!currentHtml) { alert('Сначала создай шаблон!'); return; }
                 const blob = new Blob([currentHtml], {type: 'text/html'});
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'сайт.html';
+                a.download = 'шаблон.html';
                 a.click();
                 URL.revokeObjectURL(url);
             }
@@ -270,8 +343,21 @@ def home():
             function closePreview() {
                 document.getElementById('preview-frame').style.display = 'none';
                 document.getElementById('preview-container').style.display = 'none';
-                document.getElementById('status').textContent = '';
                 currentHtml = '';
+            }
+            
+            function openModal(type) {
+                document.getElementById(type + '-modal').classList.add('active');
+            }
+            
+            function closeModal(type) {
+                document.getElementById(type + '-modal').classList.remove('active');
+            }
+            
+            window.onclick = function(e) {
+                if (e.target.classList.contains('modal')) {
+                    e.target.classList.remove('active');
+                }
             }
             
             renderGallery();
