@@ -45,7 +45,7 @@ def generate_site(req: SiteRequest):
                 "content": (
                     "Ты генератор HTML-шаблонов. Пользователь описывает, какой шаблон нужен. "
                     "Создай КРАСИВЫЙ современный адаптивный одностраничный HTML-шаблон с Tailwind CSS (подключи через CDN). "
-                    "Используй ТЁМНУЮ тему по умолчанию (тёмный фон, светлый текст), если пользователь явно не просит светлую. "
+                    "Внимательно следуй описанию пользователя по цветам и стилю. "
                     "Шаблон должен быть полностью адаптивным для мобильных устройств (используй responsive классы Tailwind: sm:, md:, lg:). "
                     "Не допускай горизонтальной прокрутки на телефонах. Используй max-width: 100vw и overflow-x: hidden на body. "
                     "Все ссылки и кнопки должны быть НЕАКТИВНЫМИ заглушками (href='#' или onclick='return false'). Не используй реальные ссылки. "
@@ -74,10 +74,11 @@ def generate_site(req: SiteRequest):
     html = re.sub(r'href="[^"]*"', 'href="#"', html)
     html = re.sub(r"href='[^']*'", "href='#'", html)
     html = re.sub(r'action="[^"]*"', 'action="#"', html)
-
+    html = html.replace('</head>', '<style>a{text-decoration:none!important;pointer-events:none;cursor:default;color:inherit}</style></head>')
+    
     last_site["html"] = html
     return {"html": html}
-    
+
 @app.get("/view", response_class=HTMLResponse)
 def view_site():
     return last_site["html"]
