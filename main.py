@@ -70,8 +70,9 @@ def generate_site(req: SiteRequest):
     else:
         html = raw
 
-    html = re.sub(r'href="[^"]*"', 'href="#"', html)
-    html = re.sub(r"href='[^']*'", "href='#'", html)
+    # Делаем ссылки неактивными, но не трогаем <link>
+    html = re.sub(r'<a\s+[^>]*href="[^"]*"', lambda m: re.sub(r'href="[^"]*"', 'href="#"', m.group()), html)
+    html = re.sub(r"<a\s+[^>]*href='[^']*'", lambda m: re.sub(r"href='[^']*'", "href='#'", m.group()), html)
     html = re.sub(r'action="[^"]*"', 'action="#"', html)
     html = html.replace('</head>', '<style>a{text-decoration:none!important;pointer-events:none;cursor:default;color:inherit}</style></head>')
 
