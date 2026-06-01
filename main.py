@@ -45,9 +45,11 @@ def generate_site(req: SiteRequest):
                 "content": (
                     "Ты генератор HTML-шаблонов. Пользователь описывает, какой шаблон нужен. "
                     "Создай КРАСИВЫЙ современный адаптивный одностраничный HTML-шаблон с Tailwind CSS (подключи через CDN). "
+                    "Используй ТЁМНУЮ тему по умолчанию (тёмный фон, светлый текст), если пользователь явно не просит светлую. "
                     "Шаблон должен быть полностью адаптивным для мобильных устройств (используй responsive классы Tailwind: sm:, md:, lg:). "
                     "Не допускай горизонтальной прокрутки на телефонах. Используй max-width: 100vw и overflow-x: hidden на body. "
-                    "Используй градиенты, красивые тени, анимации при наведении. "
+                    "Все ссылки и кнопки должны быть НЕАКТИВНЫМИ заглушками (href='#' или onclick='return false'). Не используй реальные ссылки. "
+                    "Используй красивые градиенты, тени, анимации при наведении. "
                     "Отвечай ТОЛЬКО HTML-кодом в ```html ... ```. Без пояснений."
                 )
             },
@@ -87,7 +89,7 @@ def home():
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
-            #preview-frame { width: 100%; height: 70vh; border: none; border-radius: 12px; display: none; background: white; }
+            #preview-frame { width: 100%; height: 70vh; border: none; border-radius: 12px; display: none; background: #1a1a2e; }
             #preview-container { display: none; margin-top: 20px; animation: fadeIn 0.3s ease; }
             @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
             @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -95,15 +97,11 @@ def home():
             .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 10px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; }
             .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99,102,241,0.4); }
             .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-            .btn-success { background: #10b981; color: white; padding: 8px 16px; border-radius: 10px; font-size: 13px; cursor: pointer; border: none; transition: all 0.2s; }
-            .btn-success:hover { background: #059669; }
-            .btn-download { background: #f59e0b; color: white; padding: 8px 16px; border-radius: 10px; font-size: 13px; cursor: pointer; border: none; transition: all 0.2s; }
-            .btn-download:hover { background: #d97706; }
             .site-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; backdrop-filter: blur(10px); }
             .site-card:hover { background: rgba(255,255,255,0.1); transform: translateX(4px); }
-            .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; }
+            .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; }
             .modal.active { display: flex; }
-            .modal-content { background: #0f0d2e; border-radius: 16px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); }
+            .modal-content { background: #0f0d2e; border-radius: 16px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); color: #d1d5db; }
         </style>
     </head>
     <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
@@ -177,19 +175,19 @@ def home():
         <div id="help-modal" class="modal">
             <div class="modal-content">
                 <div class="flex justify-between items-center mb-3">
-                    <h2 class="text-lg font-bold">Как пользоваться</h2>
-                    <button onclick="closeModal('help')" class="text-red-400 text-xl leading-none">✕</button>
+                    <h2 class="text-lg font-bold text-white">Как пользоваться</h2>
+                    <button onclick="closeModal('help')" class="text-gray-500 hover:text-red-400 text-xl leading-none transition">✕</button>
                 </div>
-                <div class="text-sm text-gray-300 space-y-2">
+                <div class="text-sm space-y-2">
                     <p><strong>1.</strong> Введи пароль (получи у администратора).</p>
                     <p><strong>2.</strong> Опиши шаблон: для кого, какой стиль, какие секции нужны.</p>
                     <p><strong>3.</strong> Нажми «Создать шаблон» и жди пару секунд.</p>
                     <p><strong>4.</strong> Сохрани, скачай или скопируй HTML-код.</p>
                     <p><strong>5.</strong> Открой в любом редакторе и доработай под себя.</p>
-                    <p class="text-gray-500 mt-3"><strong>Примеры запросов:</strong></p>
-                    <p class="text-gray-400">— лендинг для кофейни с меню и отзывами</p>
-                    <p class="text-gray-400">— сайт-визитка фотографа с портфолио</p>
-                    <p class="text-gray-400">— одностраничный магазин кроссовок</p>
+                    <p class="text-gray-400 mt-3"><strong>Примеры запросов:</strong></p>
+                    <p class="text-gray-500">— лендинг для кофейни с меню и отзывами</p>
+                    <p class="text-gray-500">— сайт-визитка фотографа с портфолио</p>
+                    <p class="text-gray-500">— одностраничный магазин кроссовок</p>
                 </div>
             </div>
         </div>
@@ -198,15 +196,15 @@ def home():
         <div id="about-modal" class="modal">
             <div class="modal-content">
                 <div class="flex justify-between items-center mb-3">
-                    <h2 class="text-lg font-bold">О нас</h2>
-                    <button onclick="closeModal('about')" class="text-red-400 text-xl leading-none">✕</button>
+                    <h2 class="text-lg font-bold text-white">О нас</h2>
+                    <button onclick="closeModal('about')" class="text-gray-500 hover:text-red-400 text-xl leading-none transition">✕</button>
                 </div>
-                <div class="text-sm text-gray-300 space-y-2">
+                <div class="text-sm space-y-2">
                     <p><strong>SiteForge</strong> — это генератор HTML-шаблонов с помощью искусственного интеллекта.</p>
                     <p>Мы создаём красивые адаптивные заготовки для сайтов за секунды. Вам остаётся только заменить текст и изображения.</p>
                     <p>Идеально для верстальщиков, фрилансеров и студентов.</p>
-                    <p class="text-gray-500 mt-3">Версия: 1.0</p>
-                    <p class="text-gray-500">Сделано с ❤️</p>
+                    <p class="text-gray-400 mt-3">Версия: 1.0</p>
+                    <p class="text-gray-400">Сделано с ❤️</p>
                 </div>
             </div>
         </div>
