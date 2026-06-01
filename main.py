@@ -99,8 +99,6 @@ def home():
             .btn-success:hover { background: #059669; }
             .btn-download { background: #f59e0b; color: white; padding: 8px 16px; border-radius: 10px; font-size: 13px; cursor: pointer; border: none; transition: all 0.2s; }
             .btn-download:hover { background: #d97706; }
-            .btn-outline { background: transparent; color: #8b5cf6; border: 1px solid #8b5cf6; padding: 8px 16px; border-radius: 10px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
-            .btn-outline:hover { background: rgba(139,92,246,0.1); }
             .site-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; backdrop-filter: blur(10px); }
             .site-card:hover { background: rgba(255,255,255,0.1); transform: translateX(4px); }
             .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; }
@@ -109,16 +107,18 @@ def home():
         </style>
     </head>
     <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
-        <div class="max-w-2xl w-full px-4 mx-auto py-6">
+        <div class="max-w-2xl w-full px-4 mx-auto py-6 relative">
+            <!-- Top right buttons -->
+            <div class="absolute top-4 right-4 flex gap-2">
+                <button onclick="openModal('help')" class="text-gray-500 hover:text-gray-300 text-xs transition">Помощь</button>
+                <button onclick="openModal('about')" class="text-gray-500 hover:text-gray-300 text-xs transition">О нас</button>
+            </div>
+            
             <!-- Header -->
             <div class="text-center mb-6">
                 <div class="text-5xl mb-2">🚀</div>
                 <h1 class="text-3xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">SiteForge</h1>
                 <p class="text-gray-400 mt-1 text-sm">Генератор HTML-шаблонов с помощью ИИ</p>
-                <div class="flex justify-center gap-3 mt-3">
-                    <button onclick="openModal('help')" class="btn-outline text-xs">❓ Помощь</button>
-                    <button onclick="openModal('about')" class="btn-outline text-xs">ℹ️ О нас</button>
-                </div>
             </div>
             
             <!-- Form Card -->
@@ -177,7 +177,7 @@ def home():
         <div id="help-modal" class="modal">
             <div class="modal-content">
                 <div class="flex justify-between items-center mb-3">
-                    <h2 class="text-lg font-bold">❓ Как пользоваться</h2>
+                    <h2 class="text-lg font-bold">Как пользоваться</h2>
                     <button onclick="closeModal('help')" class="text-red-400 text-xl leading-none">✕</button>
                 </div>
                 <div class="text-sm text-gray-300 space-y-2">
@@ -198,7 +198,7 @@ def home():
         <div id="about-modal" class="modal">
             <div class="modal-content">
                 <div class="flex justify-between items-center mb-3">
-                    <h2 class="text-lg font-bold">ℹ️ О нас</h2>
+                    <h2 class="text-lg font-bold">О нас</h2>
                     <button onclick="closeModal('about')" class="text-red-400 text-xl leading-none">✕</button>
                 </div>
                 <div class="text-sm text-gray-300 space-y-2">
@@ -251,7 +251,7 @@ def home():
                         status.textContent = '✅ Готово!';
                     }
                 })
-                .catch(e => { status.textContent = '❌ Ошибка: ' + e.message); })
+                .catch(e => { status.textContent = '❌ Ошибка: ' + e.message; })
                 .finally(() => {
                     isGenerating = false;
                     btn.disabled = false;
