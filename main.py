@@ -1,4 +1,5 @@
 import os
+import re
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -45,8 +46,6 @@ def generate_site(req: SiteRequest):
                 "content": (
                     "Ты генератор HTML-шаблонов. Пользователь описывает, какой шаблон нужен. "
                     "Создай КРАСИВЫЙ современный адаптивный одностраничный HTML-шаблон с Tailwind CSS (подключи через CDN). "
-                    "Внимательно следуй описанию пользователя по цветам и стилю. "
-                    "По умолчанию используй современную цветовую схему: белый фон, фиолетовые и синие акценты, цветные градиентные кнопки, лёгкие тени. Если пользователь указал конкретные цвета — используй их. "
                     "Шаблон должен быть полностью адаптивным для мобильных устройств (используй responsive классы Tailwind: sm:, md:, lg:). "
                     "Не допускай горизонтальной прокрутки на телефонах. Используй max-width: 100vw и overflow-x: hidden на body. "
                     "Все ссылки и кнопки должны быть НЕАКТИВНЫМИ заглушками (href='#' или onclick='return false'). Не используй реальные ссылки. "
@@ -70,8 +69,7 @@ def generate_site(req: SiteRequest):
         html = raw.split("```")[1].split("```")[0].strip()
     else:
         html = raw
-    # Делаем все ссылки неактивными
-    import re
+
     html = re.sub(r'href="[^"]*"', 'href="#"', html)
     html = re.sub(r"href='[^']*'", "href='#'", html)
     html = re.sub(r'action="[^"]*"', 'action="#"', html)
@@ -113,20 +111,17 @@ def home():
     </head>
     <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
         <div class="max-w-2xl w-full px-4 mx-auto py-6 relative">
-            <!-- Top right buttons -->
             <div class="absolute top-4 right-4 flex gap-2">
                 <button onclick="openModal('help')" class="text-gray-500 hover:text-gray-300 text-xs transition">Помощь</button>
                 <button onclick="openModal('about')" class="text-gray-500 hover:text-gray-300 text-xs transition">О нас</button>
             </div>
             
-            <!-- Header -->
             <div class="text-center mb-6">
                 <div class="text-5xl mb-2">🚀</div>
                 <h1 class="text-3xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">SiteForge</h1>
                 <p class="text-gray-400 mt-1 text-sm">Генератор HTML-шаблонов с помощью ИИ</p>
             </div>
             
-            <!-- Form Card -->
             <div class="bg-white/5 backdrop-blur-lg rounded-2xl p-5 border border-white/10 shadow-2xl">
                 <input id="password" type="password" placeholder="🔑 Пароль"
                        class="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white mb-3
@@ -142,7 +137,6 @@ def home():
                 <p id="status" class="mt-3 text-gray-400 text-xs text-center"></p>
             </div>
             
-            <!-- Preview -->
             <div id="preview-container">
                 <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
                     <span class="text-sm text-gray-300">Предпросмотр</span>
@@ -156,7 +150,6 @@ def home():
                 <iframe id="preview-frame"></iframe>
             </div>
             
-            <!-- Gallery -->
             <div id="gallery-section" style="display:none; margin-top: 30px;">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-lg font-bold">📂 Мои шаблоны</h2>
@@ -165,20 +158,17 @@ def home():
                 <div id="gallery-list"></div>
             </div>
             
-            <!-- Gallery Toggle -->
             <div class="text-center mt-4">
                 <button onclick="toggleGallery()" class="text-sm text-gray-400 hover:text-white transition" id="gallery-toggle">
                     📂 Сохранённые шаблоны
                 </button>
             </div>
             
-            <!-- Google Play -->
             <div class="text-center mt-6 pb-6">
                 <p class="text-xs text-gray-500">📱 Скоро в Google Play — SiteForge</p>
             </div>
         </div>
 
-        <!-- Help Modal -->
         <div id="help-modal" class="modal">
             <div class="modal-content">
                 <div class="flex justify-between items-center mb-3">
@@ -199,7 +189,6 @@ def home():
             </div>
         </div>
 
-        <!-- About Modal -->
         <div id="about-modal" class="modal">
             <div class="modal-content">
                 <div class="flex justify-between items-center mb-3">
