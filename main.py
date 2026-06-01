@@ -69,10 +69,15 @@ def generate_site(req: SiteRequest):
         html = raw.split("```")[1].split("```")[0].strip()
     else:
         html = raw
+    # Делаем все ссылки неактивными
+    import re
+    html = re.sub(r'href="[^"]*"', 'href="#"', html)
+    html = re.sub(r"href='[^']*'", "href='#'", html)
+    html = re.sub(r'action="[^"]*"', 'action="#"', html)
 
     last_site["html"] = html
     return {"html": html}
-
+    
 @app.get("/view", response_class=HTMLResponse)
 def view_site():
     return last_site["html"]
