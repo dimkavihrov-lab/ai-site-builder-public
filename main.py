@@ -72,9 +72,8 @@ def generate_site(req: SiteRequest):
     else:
         html = raw
 
-    # Делаем ссылки неактивными, но не трогаем <link>
-    html = re.sub(r'<a\s+[^>]*href="[^"]*"', lambda m: re.sub(r'href="[^"]*"', 'href="#"', m.group()), html)
-    html = re.sub(r"<a\s+[^>]*href='[^']*'", lambda m: re.sub(r"href='[^']*'", "href='#'", m.group()), html)
+    html = re.sub(r'href="[^"]*"', 'href="#"', html)
+    html = re.sub(r"href='[^']*'", "href='#'", html)
     html = re.sub(r'action="[^"]*"', 'action="#"', html)
     html = html.replace('</head>', '<style>a{text-decoration:none!important;pointer-events:none;cursor:default;color:inherit}</style></head>')
 
@@ -209,170 +208,183 @@ def home():
         </div>
         
         <script>
-    let currentHtml = '';
-    let isGenerating = false;
-    let gallery = JSON.parse(localStorage.getItem('siteforge_gallery') || '[]');
-    let generationCount = parseInt(localStorage.getItem('siteforge_generations') || '0');
-    const FREE_LIMIT = 3;
-    
-    function updateCounter() {
-        const status = document.getElementById('status');
-        const left = FREE_LIMIT - generationCount;
-        if (generationCount >= FREE_LIMIT) {
-            document.getElementById('generateBtn').disabled = true;
-            document.getElementById('generateBtn').textContent = '🔒 Лимит исчерпан';
-            status.textContent = 'Бесплатные генерации закончились. Скоро появится регистрация!';
-        } else {
-            status.textContent = `Осталось бесплатных генераций: ${left}`;
-        }
-    }
-    updateCounter();
-    
-       const password = document.getElementById('password').value;
-    const desc = document.getElementById('desc').value;
-    const status = document.getElementById('status');
-    const frame = document.getElementById('preview-frame');
-    const container = document.getElementById('preview-container');
-    const btn = document.getElementById('generateBtn');
-    const spinner = document.getElementById('spinner');
-    
-    if (!desc) { status.textContent = 'Введи описание!'; return; }
-    if (!password) { status.textContent = 'Введи пароль!'; return; }
-    
-    isGenerating = true;
-    btn.disabled = true;
-    spinner.style.display = 'block';
-    status.textContent = '⚡ Генерирую...';
-    
-    fetch('/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: desc, password: password })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.error) {
-            status.textContent = '❌ ' + data.error;
-        } else {
-            generationCount++;
-            localStorage.setItem('siteforge_generations', generationCount);
-            currentHtml = data.html;
-            frame.style.display = 'block';
-            container.style.display = 'block';
-            frame.srcdoc = data.html;
-            status.textContent = '✅ Готово!';
+            let currentHtml = '';
+            let isGenerating = false;
+            let gallery = JSON.parse(localStorage.getItem('siteforge_gallery') || '[]');
+            let generationCount = parseInt(localStorage.getItem('siteforge_generations') || '0');
+            const FREE_LIMIT = 3;
+            
+            function updateCounter() {
+                const status = document.getElementById('status');
+                const left = FREE_LIMIT - generationCount;
+                if (generationCount >= FREE_LIMIT) {
+                    document.getElementById('generateBtn').disabled = true;
+                    document.getElementById('generateBtn').textContent = '🔒 Лимит исчерпан';
+                    status.textContent = 'Бесплатные генерации закончились. Скоро появится регистрация!';
+                } else {
+                    document.getElementById('generateBtn').disabled = false;
+                    document.getElementById('generateBtn').textContent = '✨ Создать шаблон';
+                    status.textContent = `Осталось бесплатных генераций: ${left}`;
+                }
+            }
             updateCounter();
-        }
-    })
-    .catch(e => { status.textContent = '❌ Ошибка: ' + e.message; })
-    .finally(() => {
-        isGenerating = false;
-        btn.disabled = false;
-        spinner.style.display = 'none';
-        if (generationCount >= FREE_LIMIT) updateCounter();
-    });
-}
-        if (!currentHtml) { alert('Сначала создай шаблон!'); return; }
-        const title = document.getElementById('desc').value || 'Без названия';
-        gallery.unshift({ title: title, html: currentHtml, date: new Date().toLocaleString() });
-        if (gallery.length > 50) gallery = gallery.slice(0, 50);
-        localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
-        renderGallery();
-        alert('Сохранено!');
-    }
-    
-    function renderGallery() {
-        const list = document.getElementById('gallery-list');
-        list.innerHTML = gallery.map((site, i) => `
-            <div class="site-card" onclick="loadFromGallery(${i})">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <span class="text-sm font-medium">${site.title}</span>
-                        <span class="text-xs text-gray-500 ml-2">${site.date}</span>
+            
+            function generate() {
+                if (isGenerating) return;
+                const password = document.getElementById('password').value;
+                const desc = document.getElementById('desc').value;
+                const status = document.getElementById('status');
+                const frame = document.getElementById('preview-frame');
+                const container = document.getElementById('preview-container');
+                const btn = document.getElementById('generateBtn');
+                const spinner = document.getElementById('spinner');
+                
+                if (!desc) { status.textContent = 'Введи описание!'; return; }
+                if (!password) { status.textContent = 'Введи пароль!'; return; }
+                
+                const isSuperUser = (password === 'Kolqipx123098');
+                if (generationCount >= FREE_LIMIT && !isSuperUser) {
+                    status.textContent = '🔒 Лимит исчерпан. Ждите регистрацию!';
+                    return;
+                }
+                
+                isGenerating = true;
+                btn.disabled = true;
+                spinner.style.display = 'block';
+                status.textContent = '⚡ Генерирую...';
+                
+                fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ description: desc, password: password })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        status.textContent = '❌ ' + data.error;
+                    } else {
+                        if (!isSuperUser) {
+                            generationCount++;
+                            localStorage.setItem('siteforge_generations', generationCount);
+                        }
+                        currentHtml = data.html;
+                        frame.style.display = 'block';
+                        container.style.display = 'block';
+                        frame.srcdoc = data.html;
+                        status.textContent = '✅ Готово!';
+                        updateCounter();
+                    }
+                })
+                .catch(e => { status.textContent = '❌ Ошибка: ' + e.message; })
+                .finally(() => {
+                    isGenerating = false;
+                    btn.disabled = false;
+                    spinner.style.display = 'none';
+                });
+            }
+            
+            function saveToGallery() {
+                if (!currentHtml) { alert('Сначала создай шаблон!'); return; }
+                const title = document.getElementById('desc').value || 'Без названия';
+                gallery.unshift({ title: title, html: currentHtml, date: new Date().toLocaleString() });
+                if (gallery.length > 50) gallery = gallery.slice(0, 50);
+                localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
+                renderGallery();
+                alert('Сохранено!');
+            }
+            
+            function renderGallery() {
+                const list = document.getElementById('gallery-list');
+                list.innerHTML = gallery.map((site, i) => `
+                    <div class="site-card" onclick="loadFromGallery(${i})">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <span class="text-sm font-medium">${site.title}</span>
+                                <span class="text-xs text-gray-500 ml-2">${site.date}</span>
+                            </div>
+                            <button onclick="event.stopPropagation(); deleteFromGallery(${i})" class="text-red-400 text-xs hover:text-red-300">Удалить</button>
+                        </div>
                     </div>
-                    <button onclick="event.stopPropagation(); deleteFromGallery(${i})" class="text-red-400 text-xs hover:text-red-300">Удалить</button>
-                </div>
-            </div>
-        `).join('');
-        if (gallery.length === 0) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>';
-    }
-    
-    function loadFromGallery(index) {
-        const site = gallery[index];
-        currentHtml = site.html;
-        document.getElementById('desc').value = site.title;
-        document.getElementById('preview-frame').srcdoc = site.html;
-        document.getElementById('preview-frame').style.display = 'block';
-        document.getElementById('preview-container').style.display = 'block';
-    }
-    
-    function deleteFromGallery(index) {
-        if (confirm('Удалить?')) {
-            gallery.splice(index, 1);
-            localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
+                `).join('');
+                if (gallery.length === 0) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>';
+            }
+            
+            function loadFromGallery(index) {
+                const site = gallery[index];
+                currentHtml = site.html;
+                document.getElementById('desc').value = site.title;
+                document.getElementById('preview-frame').srcdoc = site.html;
+                document.getElementById('preview-frame').style.display = 'block';
+                document.getElementById('preview-container').style.display = 'block';
+            }
+            
+            function deleteFromGallery(index) {
+                if (confirm('Удалить?')) {
+                    gallery.splice(index, 1);
+                    localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
+                    renderGallery();
+                }
+            }
+            
+            function clearGallery() {
+                if (confirm('Удалить ВСЁ?')) {
+                    gallery = [];
+                    localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
+                    renderGallery();
+                }
+            }
+            
+            function toggleGallery() {
+                const section = document.getElementById('gallery-section');
+                const btn = document.getElementById('gallery-toggle');
+                if (section.style.display === 'block') {
+                    section.style.display = 'none';
+                    btn.textContent = '📂 Сохранённые шаблоны';
+                } else {
+                    section.style.display = 'block';
+                    btn.textContent = '📂 Скрыть шаблоны';
+                    renderGallery();
+                }
+            }
+            
+            function copyCode() {
+                if (!currentHtml) { alert('Сначала создай шаблон!'); return; }
+                navigator.clipboard.writeText(currentHtml).then(() => alert('Скопировано!'));
+            }
+            
+            function downloadHTML() {
+                if (!currentHtml) { alert('Сначала создай шаблон!'); return; }
+                const blob = new Blob([currentHtml], {type: 'text/html'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'шаблон.html';
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+            
+            function closePreview() {
+                document.getElementById('preview-frame').style.display = 'none';
+                document.getElementById('preview-container').style.display = 'none';
+                currentHtml = '';
+            }
+            
+            function openModal(type) {
+                document.getElementById(type + '-modal').classList.add('active');
+            }
+            
+            function closeModal(type) {
+                document.getElementById(type + '-modal').classList.remove('active');
+            }
+            
+            window.onclick = function(e) {
+                if (e.target.classList.contains('modal')) {
+                    e.target.classList.remove('active');
+                }
+            }
+            
             renderGallery();
-        }
-    }
-    
-    function clearGallery() {
-        if (confirm('Удалить ВСЁ?')) {
-            gallery = [];
-            localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
-            renderGallery();
-        }
-    }
-    
-    function toggleGallery() {
-        const section = document.getElementById('gallery-section');
-        const btn = document.getElementById('gallery-toggle');
-        if (section.style.display === 'block') {
-            section.style.display = 'none';
-            btn.textContent = '📂 Сохранённые шаблоны';
-        } else {
-            section.style.display = 'block';
-            btn.textContent = '📂 Скрыть шаблоны';
-            renderGallery();
-        }
-    }
-    
-    function copyCode() {
-        if (!currentHtml) { alert('Сначала создай шаблон!'); return; }
-        navigator.clipboard.writeText(currentHtml).then(() => alert('Скопировано!'));
-    }
-    
-    function downloadHTML() {
-        if (!currentHtml) { alert('Сначала создай шаблон!'); return; }
-        const blob = new Blob([currentHtml], {type: 'text/html'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'шаблон.html';
-        a.click();
-        URL.revokeObjectURL(url);
-    }
-    
-    function closePreview() {
-        document.getElementById('preview-frame').style.display = 'none';
-        document.getElementById('preview-container').style.display = 'none';
-        currentHtml = '';
-    }
-    
-    function openModal(type) {
-        document.getElementById(type + '-modal').classList.add('active');
-    }
-    
-    function closeModal(type) {
-        document.getElementById(type + '-modal').classList.remove('active');
-    }
-    
-    window.onclick = function(e) {
-        if (e.target.classList.contains('modal')) {
-            e.target.classList.remove('active');
-        }
-    }
-    
-    renderGallery();
-</script>
+        </script>
     </body>
     </html>
     """
