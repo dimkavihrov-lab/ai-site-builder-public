@@ -15,7 +15,7 @@ client = OpenAI(
 
 app = FastAPI()
 
-PASSWORDS = ["123098123098", "Kolqipx123098"]
+PASSWORD = "123098123098"
 last_site = {"html": ""}
 
 class SiteRequest(BaseModel):
@@ -35,7 +35,7 @@ def edit_html(req: EditRequest):
 @app.post("/generate")
 def generate_site(req: SiteRequest):
     global last_site
-    if req.password not in PASSWORDS:
+    if req.password != PASSWORD:
         return {"error": "Неверный пароль"}
     
     response = client.chat.completions.create(
