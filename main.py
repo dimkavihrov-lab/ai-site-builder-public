@@ -93,7 +93,7 @@ def login(req: AuthRequest):
     user = cur.fetchone()
     cur.close()
     conn.close()
-    if not user or not bcrypt.checkpw(req.password.encode('utf-8'), user["password_hash"].encode('utf-8')):
+    if not user or not bcrypt.checkpw(req.password.encode('utf-8'), user["password_hash"].encode('utf-8') if isinstance(user["password_hash"], str) else user["password_hash"]):
         raise HTTPException(status_code=401, detail="Неверный email или пароль")
     return {"email": user["email"], "generations_used": user["generations_used"], "is_superuser": user["is_superuser"]}
 
