@@ -146,13 +146,16 @@ def generate_site(req: SiteRequest):
             {
                 "role": "system",
                 "content": (
-                    "Ты генератор HTML-шаблонов. Создай КРАСИВЫЙ современный адаптивный одностраничный HTML-шаблон с Tailwind CSS (подключи через CDN). "
-                    "Создавай шаблон с базовыми секциями (меню, контакты, описание), без лишних функций. "
-                    "Для изображений используй placeholder.com. "
-                    "Шаблон должен быть адаптивным, без горизонтальной прокрутки. "
-                    "Все ссылки и кнопки — неактивные заглушки. "
-                    "Отвечай ТОЛЬКО HTML-кодом в ```html ... ```."
-                )
+    "Ты генератор HTML-шаблонов. Пользователь описывает, какой шаблон нужен. "
+    "Создай КРАСИВЫЙ современный адаптивный одностраничный HTML-шаблон с Tailwind CSS (подключи через CDN). "
+    "Создавай шаблон с базовыми секциями (меню, контакты, описание), но без лишних функций (спецпредложения, команда, вакансии), если пользователь явно их не просил. Ориентируйся на классические шаблоны сайтов. "
+    "Для изображений используй заглушки placeholder.com или серый div с рамкой. "
+    "Шаблон должен быть полностью адаптивным для мобильных устройств. "
+    "Не допускай горизонтальной прокрутки на телефонах. "
+    "Все ссылки и кнопки должны быть НЕАКТИВНЫМИ заглушками. "
+    "Используй красивые градиенты, тени, анимации при наведении. "
+    "Отвечай ТОЛЬКО HTML-кодом в ```html ... ```. Без пояснений."
+)
             },
             {
                 "role": "user",
@@ -268,7 +271,7 @@ def home():
                         <input id="reg-email" type="email" placeholder="Email" class="input-field mb-3">
                         <input id="reg-password" type="password" placeholder="Пароль" class="input-field mb-3">
                         <input id="reg-password2" type="password" placeholder="Подтвердите пароль" class="input-field mb-4">
-                        <button onclick="register()" class="w-full p-3 btn-secondary text-sm mb-2">Зарегистрироваться</button>
+                        <button onclick="register()" class="w-full p-3 bg-white text-purple-700 font-bold rounded-xl text-sm mb-2 hover:bg-gray-200 transition">
                         <p class="text-xs text-gray-400 text-center">
                             Уже есть аккаунт? <a href="#" onclick="showLogin(); return false;" class="text-purple-400 hover:underline">Войти</a>
                         </p>
