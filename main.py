@@ -228,13 +228,60 @@ def home():
     }
     updateCounter();
     
-    function generate() {
-        if (isGenerating) return;
-        const pass = document.getElementById('password').value;
-        if (generationCount >= FREE_LIMIT && pass !== 'Kolqipx123098') {
-            alert('Лимит бесплатных генераций исчерпан. Ждите обновлений!');
-            return;
+   function generate() {
+    if (isGenerating) return;
+    const password = document.getElementById('password').value;
+    const desc = document.getElementById('desc').value;
+    const status = document.getElementById('status');
+    const frame = document.getElementById('preview-frame');
+    const container = document.getElementById('preview-container');
+    const btn = document.getElementById('generateBtn');
+    const spinner = document.getElementById('spinner');
+    
+    if (!desc) { status.textContent = 'Введи описание!'; return; }
+    if (!password) { status.textContent = 'Введи пароль!'; return; }
+    
+    const isSuperUser = (password === 'Kolqipx123098');
+    if (generationCount >= FREE_LIMIT && !isSuperUser) {
+        status.textContent = '🔒 Лимит исчерпан. Ждите регистрацию!';
+        return;
+    }
+    
+    isGenerating = true;
+    btn.disabled = true;
+    spinner.style.display = 'block';
+    status.textContent = '⚡ Генерирую...';
+    
+    fetch('/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: desc, password: password })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            status.textContent = '❌ ' + data.error;
+        } else {
+            if (!isSuperUser) {
+                generationCount++;
+                localStorage.setItem('siteforge_generations', generationCount);
+            }
+            currentHtml = data.html;
+            frame.style.display = 'block';
+            container.style.display = 'block';
+            frame.srcdoc = data.html;
+            status.textContent = '✅ Готово!';
+            updateCounter();
         }
+    })
+    .catch(e => { status.textContent = '❌ Ошибка: ' + e.message; })
+    .finally(() => {
+        isGenerating = false;
+        btn.disabled = false;
+        spinner.style.display = 'none';
+        if (generationCount >= FREE_LIMIT) updateCounter();
+    });
+}
         const password = document.getElementById('password').value;
         const desc = document.getElementById('desc').value;
         const status = document.getElementById('status');
