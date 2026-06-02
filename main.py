@@ -209,7 +209,7 @@ def home():
                         <input id="login-email" type="email" placeholder="Email" class="input-field">
                         <input id="login-password" type="password" placeholder="Пароль" class="input-field">
                         <button onclick="login()" class="w-full p-3 btn-primary text-sm mb-2">Войти</button>
-                        <p class="text-xs text-gray-400 text-center">Нет аккаунта? <a href="#" onclick="showRegister(); return false;" class="text-white font-bold hover:underline">Зарегистрироваться</a></p>
+                        <p class="text-xs text-gray-400 text-center mt-3">Нет аккаунта? <a href="#" onclick="showRegister(); return false;" class="text-white font-bold hover:underline">Зарегистрироваться</a></p>
                     </div>
                     <div id="auth-form-register" style="display:none;">
                         <h3 class="text-sm font-bold mb-3">Регистрация</h3>
@@ -217,7 +217,7 @@ def home():
                         <input id="reg-password" type="password" placeholder="Пароль" class="input-field">
                         <input id="reg-password2" type="password" placeholder="Подтвердите пароль" class="input-field">
                         <button onclick="register()" class="w-full p-3 btn-primary text-sm font-bold">Зарегистрироваться</button>
-                        <p class="text-xs text-gray-400 text-center mt-2">Уже есть аккаунт? <a href="#" onclick="showLogin(); return false;" class="text-white font-bold hover:underline">Войти</a></p>
+                        <p class="text-xs text-gray-400 text-center mt-3">Уже есть аккаунт? <a href="#" onclick="showLogin(); return false;" class="text-white font-bold hover:underline">Войти</a></p>
                     </div>
                     <p id="auth-status" class="mt-3 text-xs text-center text-gray-400"></p>
                 </div>
