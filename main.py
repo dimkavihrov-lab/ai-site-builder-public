@@ -51,15 +51,13 @@ def init_db():
 
 init_db()
 
-PASSWORD = "123098123098"
 last_site = {"html": ""}
 FREE_LIMIT = 3
 
 class SiteRequest(BaseModel):
     description: str
-    password: str = None
-    email: str = None
-    user_password: str = None
+    email: str
+    user_password: str
 
 class EditRequest(BaseModel):
     html: str
@@ -121,23 +119,17 @@ def edit_html(req: EditRequest):
 def generate_site(req: SiteRequest):
     global last_site
     
-    user = None
-    if req.email and req.user_password:
-        conn = get_db()
-        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        cur.execute("SELECT * FROM users WHERE email = %s", (req.email,))
-        user = cur.fetchone()
-        cur.close()
-        conn.close()
-        
-        if not user or not bcrypt.verify(req.user_password, user["password_hash"]):
-            return {"error": "Неверный email или пароль"}
-    elif req.password == PASSWORD:
-        pass
-    else:
-        return {"error": "Неверный пароль. Войдите или зарегистрируйтесь."}
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cur.execute("SELECT * FROM users WHERE email = %s", (req.email,))
+    user = cur.fetchone()
+    cur.close()
+    conn.close()
     
-    if user and not user["is_superuser"] and user["generations_used"] >= FREE_LIMIT:
+    if not user or not bcrypt.verify(req.user_password, user["password_hash"]):
+        return {"error": "Неверный email или пароль"}
+    
+    if not user["is_superuser"] and user["generations_used"] >= FREE_LIMIT:
         return {"error": f"Лимит исчерпан ({FREE_LIMIT} генераций). Ждите обновлений!"}
     
     response = client.chat.completions.create(
@@ -179,7 +171,7 @@ def generate_site(req: SiteRequest):
     html = re.sub(r'action="[^"]*"', 'action="#"', html)
     html = html.replace('</head>', '<style>a{text-decoration:none!important;pointer-events:none;cursor:default;color:inherit}</style></head>')
 
-    if user and not user["is_superuser"]:
+    if not user["is_superuser"]:
         conn = get_db()
         cur = conn.cursor()
         cur.execute("UPDATE users SET generations_used = generations_used + 1 WHERE id = %s", (user["id"],))
@@ -211,21 +203,21 @@ def home():
             @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
             @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
             .spinner { animation: spin 1s linear infinite; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #8b5cf6; border-radius: 50%; display: none; margin: 10px auto; }
-            .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 10px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; }
+            .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; text-align: center; }
             .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99,102,241,0.4); }
             .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-            .btn-white { background: white; color: #6b21a8; padding: 10px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; }
+            .btn-white { background: white; color: #6b21a8; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; }
             .btn-white:hover { background: #e2e8f0; }
+            .nav-btn { flex: 1; padding: 10px; border-radius: 10px 10px 0 0; cursor: pointer; border: none; font-size: 14px; font-weight: bold; transition: all 0.2s; }
+            .nav-btn.active { background: #8b5cf6; color: white; }
+            .nav-btn.inactive { background: #1e1b4b; color: #888; }
+            .input-field { width: 100%; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 14px; outline: none; margin-bottom: 12px; }
+            .input-field:focus { border-color: #8b5cf6; }
             .site-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px; margin-bottom: 8px; cursor: pointer; }
             .site-card:hover { background: rgba(255,255,255,0.1); }
             .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; }
             .modal.active { display: flex; }
             .modal-content { background: #0f0d2e; border-radius: 16px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); color: #d1d5db; }
-            .tab-btn { padding: 8px 16px; border-radius: 8px 8px 0 0; cursor: pointer; border: none; font-size: 14px; }
-            .tab-btn.active { background: #8b5cf6; color: white; }
-            .tab-btn.inactive { background: #1e1b4b; color: #888; }
-            .input-field { width: 100%; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 14px; outline: none; }
-            .input-field:focus { ring: 2px solid #8b5cf6; border-color: #8b5cf6; }
         </style>
     </head>
     <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
@@ -242,15 +234,16 @@ def home():
                 <p id="user-info" class="text-xs text-gray-500 mt-1"></p>
             </div>
             
-            <div class="bg-white/5 backdrop-blur-lg rounded-2xl p-5 border border-white/10 shadow-2xl">
-                <div class="flex mb-4">
-                    <button class="tab-btn active" id="tab-generate" onclick="switchTab('generate')">Генерация</button>
-                    <button class="tab-btn inactive" id="tab-auth" onclick="switchTab('auth')">Вход / Регистрация</button>
-                </div>
-                
+            <!-- Навигация пополам -->
+            <div class="flex mb-0">
+                <button class="nav-btn active" id="nav-generate" onclick="switchTab('generate')">✨ Генерация</button>
+                <button class="nav-btn inactive" id="nav-auth" onclick="switchTab('auth')">👤 Вход / Регистрация</button>
+            </div>
+            
+            <div class="bg-white/5 backdrop-blur-lg rounded-b-2xl rounded-tr-2xl p-5 border border-white/10 shadow-2xl">
                 <div id="panel-generate">
                     <input id="desc" type="text" placeholder="💡 Опиши шаблон, например: лендинг для кофейни"
-                           class="input-field mb-4" maxlength="500">
+                           class="input-field" maxlength="500">
                     <button id="generateBtn" onclick="generate()" class="w-full p-4 btn-primary text-lg">
                         ✨ Создать шаблон
                     </button>
@@ -259,21 +252,21 @@ def home():
                 <div id="panel-auth" style="display:none;">
                     <div id="auth-form-login">
                         <h3 class="text-sm font-bold mb-3">Вход</h3>
-                        <input id="login-email" type="email" placeholder="Email" class="input-field mb-3">
-                        <input id="login-password" type="password" placeholder="Пароль" class="input-field mb-4">
+                        <input id="login-email" type="email" placeholder="Email" class="input-field">
+                        <input id="login-password" type="password" placeholder="Пароль" class="input-field">
                         <button onclick="login()" class="w-full p-3 btn-primary text-sm mb-2">Войти</button>
                         <p class="text-xs text-gray-400 text-center">
-                            Нет аккаунта? <a href="#" onclick="showRegister(); return false;" class="text-purple-400 hover:underline">Зарегистрироваться</a>
+                            Нет аккаунта? <a href="#" onclick="showRegister(); return false;" class="text-white font-bold hover:underline">Зарегистрироваться</a>
                         </p>
                     </div>
                     <div id="auth-form-register" style="display:none;">
                         <h3 class="text-sm font-bold mb-3">Регистрация</h3>
-                        <input id="reg-email" type="email" placeholder="Email" class="input-field mb-3">
-                        <input id="reg-password" type="password" placeholder="Пароль" class="input-field mb-3">
-                        <input id="reg-password2" type="password" placeholder="Подтвердите пароль" class="input-field mb-4">
-                        <button onclick="register()" class="w-full p-3 btn-white text-sm mb-2 font-bold">Зарегистрироваться</button>
-                        <p class="text-xs text-gray-400 text-center">
-                            Уже есть аккаунт? <a href="#" onclick="showLogin(); return false;" class="text-purple-400 hover:underline">Войти</a>
+                        <input id="reg-email" type="email" placeholder="Email" class="input-field">
+                        <input id="reg-password" type="password" placeholder="Пароль" class="input-field">
+                        <input id="reg-password2" type="password" placeholder="Подтвердите пароль" class="input-field">
+                        <button onclick="register()" class="w-full p-3 btn-white text-sm font-bold">Зарегистрироваться</button>
+                        <p class="text-xs text-gray-400 text-center mt-2">
+                            Уже есть аккаунт? <a href="#" onclick="showLogin(); return false;" class="text-white font-bold hover:underline">Войти</a>
                         </p>
                     </div>
                     <p id="auth-status" class="mt-3 text-xs text-center text-gray-400"></p>
@@ -355,11 +348,12 @@ def home():
             function updateUserInfo() {
                 const info = document.getElementById('user-info');
                 if (currentUser) {
-                    info.textContent = `👤 ${currentUser.email} | Осталось: ${FREE_LIMIT - currentUser.generations_used}`;
-                    document.getElementById('tab-auth').textContent = 'Профиль';
+                    const left = FREE_LIMIT - currentUser.generations_used;
+                    info.textContent = `👤 ${currentUser.email} | Осталось: ${left > 0 ? left : 0}`;
+                    document.getElementById('nav-auth').textContent = '👤 Профиль';
                 } else {
                     info.textContent = '';
-                    document.getElementById('tab-auth').textContent = 'Вход / Регистрация';
+                    document.getElementById('nav-auth').textContent = '👤 Вход / Регистрация';
                 }
             }
             updateUserInfo();
@@ -367,8 +361,8 @@ def home():
             function switchTab(tab) {
                 document.getElementById('panel-generate').style.display = tab === 'generate' ? 'block' : 'none';
                 document.getElementById('panel-auth').style.display = tab === 'auth' ? 'block' : 'none';
-                document.getElementById('tab-generate').className = tab === 'generate' ? 'tab-btn active' : 'tab-btn inactive';
-                document.getElementById('tab-auth').className = tab === 'auth' ? 'tab-btn active' : 'tab-btn inactive';
+                document.getElementById('nav-generate').className = tab === 'generate' ? 'nav-btn active' : 'nav-btn inactive';
+                document.getElementById('nav-auth').className = tab === 'auth' ? 'nav-btn active' : 'nav-btn inactive';
                 if (tab === 'auth') showLogin();
             }
             
@@ -442,6 +436,13 @@ def home():
             
             function generate() {
                 if (isGenerating) return;
+                
+                if (!currentUser) {
+                    document.getElementById('status').textContent = '❌ Сначала войдите или зарегистрируйтесь!';
+                    switchTab('auth');
+                    return;
+                }
+                
                 const desc = document.getElementById('desc').value;
                 const status = document.getElementById('status');
                 const frame = document.getElementById('preview-frame');
@@ -451,7 +452,7 @@ def home():
                 
                 if (!desc) { status.textContent = 'Введи описание!'; return; }
                 
-                if (currentUser && !currentUser.is_superuser && currentUser.generations_used >= FREE_LIMIT) {
+                if (!currentUser.is_superuser && currentUser.generations_used >= FREE_LIMIT) {
                     status.textContent = '🔒 Лимит исчерпан. Ждите обновлений!';
                     return;
                 }
@@ -461,21 +462,21 @@ def home():
                 spinner.style.display = 'block';
                 status.textContent = '⚡ Генерирую...';
                 
-                const body = currentUser 
-                    ? { description: desc, email: currentUser.email, user_password: '***' }
-                    : { description: desc, password: '123098123098' };
-                
                 fetch('/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
+                    body: JSON.stringify({
+                        description: desc,
+                        email: currentUser.email,
+                        user_password: currentUser.email
+                    })
                 })
                 .then(res => res.json())
                 .then(data => {
                     if (data.error) {
                         status.textContent = '❌ ' + data.error;
                     } else {
-                        if (currentUser && !currentUser.is_superuser) {
+                        if (!currentUser.is_superuser) {
                             currentUser.generations_used++;
                             localStorage.setItem('siteforge_user', JSON.stringify(currentUser));
                         }
@@ -495,18 +496,18 @@ def home():
                 });
             }
             
-            function saveToGallery() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } const title = document.getElementById('desc').value || 'Без названия'; gallery.unshift({ title: title, html: currentHtml, date: new Date().toLocaleString() }); if (gallery.length > 50) gallery = gallery.slice(0, 50); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); alert('Сохранено!'); }
-            function renderGallery() { const list = document.getElementById('gallery-list'); list.innerHTML = gallery.map((site, i) => `<div class="site-card" onclick="loadFromGallery(${i})"><div class="flex justify-between items-center"><div><span class="text-sm font-medium">${site.title}</span><span class="text-xs text-gray-500 ml-2">${site.date}</span></div><button onclick="event.stopPropagation(); deleteFromGallery(${i})" class="text-red-400 text-xs hover:text-red-300">Удалить</button></div></div>`).join(''); if (gallery.length === 0) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>'; }
-            function loadFromGallery(index) { const site = gallery[index]; currentHtml = site.html; document.getElementById('desc').value = site.title; document.getElementById('preview-frame').srcdoc = site.html; document.getElementById('preview-frame').style.display = 'block'; document.getElementById('preview-container').style.display = 'block'; }
+            function saveToGallery() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } const title = document.getElementById('desc').value || 'Без названия'; gallery.unshift({ title, html: currentHtml, date: new Date().toLocaleString() }); if (gallery.length > 50) gallery = gallery.slice(0, 50); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); alert('Сохранено!'); }
+            function renderGallery() { const list = document.getElementById('gallery-list'); list.innerHTML = gallery.map((site, i) => `<div class="site-card" onclick="loadFromGallery(${i})"><div class="flex justify-between items-center"><div><span class="text-sm font-medium">${site.title}</span><span class="text-xs text-gray-500 ml-2">${site.date}</span></div><button onclick="event.stopPropagation(); deleteFromGallery(${i})" class="text-red-400 text-xs hover:text-red-300">Удалить</button></div></div>`).join(''); if (!gallery.length) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>'; }
+            function loadFromGallery(index) { const s = gallery[index]; currentHtml = s.html; document.getElementById('desc').value = s.title; const f = document.getElementById('preview-frame'); f.srcdoc = s.html; f.style.display = 'block'; document.getElementById('preview-container').style.display = 'block'; }
             function deleteFromGallery(index) { if (confirm('Удалить?')) { gallery.splice(index, 1); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
             function clearGallery() { if (confirm('Удалить ВСЁ?')) { gallery = []; localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
-            function toggleGallery() { const section = document.getElementById('gallery-section'); const btn = document.getElementById('gallery-toggle'); if (section.style.display === 'block') { section.style.display = 'none'; btn.textContent = '📂 Сохранённые шаблоны'; } else { section.style.display = 'block'; btn.textContent = '📂 Скрыть шаблоны'; renderGallery(); } }
+            function toggleGallery() { const s = document.getElementById('gallery-section'); const b = document.getElementById('gallery-toggle'); if (s.style.display === 'block') { s.style.display = 'none'; b.textContent = '📂 Сохранённые шаблоны'; } else { s.style.display = 'block'; b.textContent = '📂 Скрыть шаблоны'; renderGallery(); } }
             function copyCode() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } navigator.clipboard.writeText(currentHtml).then(() => alert('Скопировано!')); }
-            function downloadHTML() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } const blob = new Blob([currentHtml], {type: 'text/html'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'шаблон.html'; a.click(); URL.revokeObjectURL(url); }
+            function downloadHTML() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } const b = new Blob([currentHtml], {type: 'text/html'}); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = 'шаблон.html'; a.click(); URL.revokeObjectURL(u); }
             function closePreview() { document.getElementById('preview-frame').style.display = 'none'; document.getElementById('preview-container').style.display = 'none'; currentHtml = ''; }
-            function openModal(type) { document.getElementById(type + '-modal').classList.add('active'); }
-            function closeModal(type) { document.getElementById(type + '-modal').classList.remove('active'); }
-            window.onclick = function(e) { if (e.target.classList.contains('modal')) { e.target.classList.remove('active'); } }
+            function openModal(t) { document.getElementById(t + '-modal').classList.add('active'); }
+            function closeModal(t) { document.getElementById(t + '-modal').classList.remove('active'); }
+            window.onclick = function(e) { if (e.target.classList.contains('modal')) e.target.classList.remove('active'); }
             
             renderGallery();
         </script>
