@@ -93,7 +93,7 @@ def login(req: AuthRequest):
     user = cur.fetchone()
     cur.close()
     conn.close()
-    if not user or not bcrypt.checkpw(req.user_password.encode('utf-8'), user["password_hash"].encode('utf-8')):
+    if not user or not bcrypt.checkpw(req.password.encode('utf-8'), user["password_hash"].encode('utf-8')):
         raise HTTPException(status_code=401, detail="Неверный email или пароль")
     return {"email": user["email"], "generations_used": user["generations_used"], "is_superuser": user["is_superuser"]}
 
@@ -110,7 +110,7 @@ def generate_site(req: SiteRequest):
     user = cur.fetchone()
     cur.close()
     conn.close()
-    if not user or not bcrypt.checkpw(req.user_password, user["password_hash"]):
+    if not user or not bcrypt.checkpw(req.user_password.encode('utf-8'), user["password_hash"].encode('utf-8')):
         return {"error": "Неверный email или пароль"}
     if not user["is_superuser"] and user["generations_used"] >= FREE_LIMIT:
         return {"error": f"Лимит исчерпан ({FREE_LIMIT} генераций). Ждите обновлений!"}
@@ -262,258 +262,127 @@ def home():
                 <div class="text-sm space-y-2"><p><strong>SiteForge</strong> — генератор HTML-шаблонов с помощью ИИ.</p><p>Создаём красивые адаптивные заготовки за секунды.</p><p class="text-gray-400 mt-3">Версия: 1.0</p><p class="text-gray-400">Сделано с ❤️</p></div>
             </div>
         </div>
-       <script>
-    let currentHtml = '';
-    let isGenerating = false;
-    let currentUser = JSON.parse(localStorage.getItem('siteforge_user') || 'null');
-    let gallery = JSON.parse(localStorage.getItem('siteforge_gallery') || '[]');
-    let galleryVisible = 4;
-    const FREE_LIMIT = 3;
-    
-    function updateUserInfo() {
-        const info = document.getElementById('user-info');
-        if (currentUser) {
-            const left = FREE_LIMIT - currentUser.generations_used;
-            info.textContent = `👤 ${currentUser.email} | Осталось: ${left > 0 ? left : 0}`;
-            document.getElementById('nav-auth').textContent = '👤 Профиль';
-        } else {
-            info.textContent = '';
-            document.getElementById('nav-auth').textContent = '👤 Вход / Регистрация';
-        }
-    }
-    updateUserInfo();
-    
-    function switchTab(tab) {
-        document.getElementById('panel-generate').style.display = tab === 'generate' ? 'block' : 'none';
-        document.getElementById('panel-auth').style.display = tab === 'auth' ? 'block' : 'none';
-        document.getElementById('nav-generate').className = tab === 'generate' ? 'nav-btn active' : 'nav-btn inactive';
-        document.getElementById('nav-auth').className = tab === 'auth' ? 'nav-btn active' : 'nav-btn inactive';
-        if (tab === 'auth') showLogin();
-    }
-    
-    function showLogin() {
-        document.getElementById('auth-form-login').style.display = 'block';
-        document.getElementById('auth-form-register').style.display = 'none';
-        document.getElementById('auth-status').textContent = '';
-    }
-    
-    function showRegister() {
-        document.getElementById('auth-form-login').style.display = 'none';
-        document.getElementById('auth-form-register').style.display = 'block';
-        document.getElementById('auth-status').textContent = '';
-    }
-    
-    async function login() {
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-        const status = document.getElementById('auth-status');
-        if (!email || !password) { status.textContent = 'Заполни все поля'; return; }
-        try {
-            const res = await fetch('/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-            if (!res.ok) {
-                const err = await res.json();
-                status.textContent = '❌ ' + err.detail;
-            } else {
-                const user = await res.json();
-                currentUser = user;
-                localStorage.setItem('siteforge_user', JSON.stringify(user));
-                localStorage.setItem('siteforge_pass', password);
-                status.textContent = '✅ Вход выполнен!';
-                updateUserInfo();
-                setTimeout(() => switchTab('generate'), 1000);
-            }
-        } catch(e) {
-            status.textContent = '❌ Ошибка: ' + e.message;
-        }
-    }
-    
-    async function register() {
-        const email = document.getElementById('reg-email').value;
-        const password = document.getElementById('reg-password').value;
-        const password2 = document.getElementById('reg-password2').value;
-        const status = document.getElementById('auth-status');
-        if (!email || !password || !password2) { status.textContent = 'Заполни все поля'; return; }
-        if (password !== password2) { status.textContent = '❌ Пароли не совпадают'; return; }
-        if (password.length < 4) { status.textContent = '❌ Пароль должен быть не менее 4 символов'; return; }
-        try {
-            const res = await fetch('/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-            if (!res.ok) {
-                const err = await res.json();
-                status.textContent = '❌ ' + err.detail;
-            } else {
-                status.textContent = '✅ Регистрация успешна! Теперь войди.';
-                showLogin();
-                document.getElementById('login-email').value = email;
-            }
-        } catch(e) {
-            status.textContent = '❌ Ошибка: ' + e.message;
-        }
-    }
-    
-    function generate() {
-        if (isGenerating) return;
-        if (!currentUser) {
-            document.getElementById('status').textContent = '❌ Сначала войдите или зарегистрируйтесь!';
-            switchTab('auth');
-            return;
-        }
-        const desc = document.getElementById('desc').value;
-        const status = document.getElementById('status');
-        const frame = document.getElementById('preview-frame');
-        const container = document.getElementById('preview-container');
-        const btn = document.getElementById('generateBtn');
-        const spinner = document.getElementById('spinner');
-        if (!desc) { status.textContent = 'Введи описание!'; return; }
-        if (!currentUser.is_superuser && currentUser.generations_used >= FREE_LIMIT) {
-            status.textContent = '🔒 Лимит исчерпан. Ждите обновлений!';
-            return;
-        }
-        isGenerating = true;
-        btn.disabled = true;
-        spinner.style.display = 'block';
-        status.textContent = '⚡ Генерирую...';
-        fetch('/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                description: desc,
-                email: currentUser.email,
-                user_password: localStorage.getItem('siteforge_pass') || ''
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.error) {
-                status.textContent = '❌ ' + data.error;
-            } else {
-                if (!currentUser.is_superuser) {
-                    currentUser.generations_used++;
-                    localStorage.setItem('siteforge_user', JSON.stringify(currentUser));
+        <script>
+            let currentHtml = '';
+            let isGenerating = false;
+            let currentUser = JSON.parse(localStorage.getItem('siteforge_user') || 'null');
+            let gallery = JSON.parse(localStorage.getItem('siteforge_gallery') || '[]');
+            let galleryVisible = 4;
+            const FREE_LIMIT = 3;
+            
+            function updateUserInfo() {
+                const info = document.getElementById('user-info');
+                if (currentUser) {
+                    const left = FREE_LIMIT - currentUser.generations_used;
+                    info.textContent = `👤 ${currentUser.email} | Осталось: ${left > 0 ? left : 0}`;
+                    document.getElementById('nav-auth').textContent = '👤 Профиль';
+                } else {
+                    info.textContent = '';
+                    document.getElementById('nav-auth').textContent = '👤 Вход / Регистрация';
                 }
-                currentHtml = data.html;
-                frame.style.display = 'block';
-                container.style.display = 'block';
-                frame.srcdoc = data.html;
-                status.textContent = '✅ Готово!';
-                updateUserInfo();
             }
-        })
-        .catch(e => { status.textContent = '❌ Ошибка: ' + e.message; })
-        .finally(() => {
-            isGenerating = false;
-            btn.disabled = false;
-            spinner.style.display = 'none';
-        });
-    }
-    
-    function saveToGallery() {
-        if (!currentHtml) { alert('Сначала создай шаблон!'); return; }
-        const title = document.getElementById('desc').value || 'Без названия';
-        gallery.unshift({ title: title, html: currentHtml, date: new Date().toLocaleString() });
-        if (gallery.length > 50) gallery = gallery.slice(0, 50);
-        localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
-        renderGallery();
-        alert('Сохранено!');
-    }
-    
-    function renderGallery() {
-        const list = document.getElementById('gallery-list');
-        const visible = gallery.slice(0, galleryVisible);
-        list.innerHTML = visible.map((site, i) => `
-            <div class="site-card" onclick="loadFromGallery(${i})">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <span class="text-sm font-medium">${site.title}</span>
-                        <span class="text-xs text-gray-500 ml-2">${site.date}</span>
-                    </div>
-                    <button onclick="event.stopPropagation(); deleteFromGallery(${i})" class="text-red-400 text-xs hover:text-red-300">Удалить</button>
-                </div>
-            </div>
-        `).join('');
-        if (gallery.length > 4 && galleryVisible === 4) {
-            list.innerHTML += `<button onclick="showAll()" class="w-full text-center text-sm text-purple-400 hover:text-purple-300 py-2">Показать все (${gallery.length})</button>`;
-        }
-        if (!gallery.length) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>';
-    }
-    
-    function showAll() { galleryVisible = gallery.length; renderGallery(); }
-    
-    function loadFromGallery(index) {
-        const s = gallery[index];
-        currentHtml = s.html;
-        document.getElementById('desc').value = s.title;
-        const f = document.getElementById('preview-frame');
-        f.srcdoc = s.html;
-        f.style.display = 'block';
-        document.getElementById('preview-container').style.display = 'block';
-    }
-    
-    function deleteFromGallery(index) {
-        if (confirm('Удалить?')) {
-            gallery.splice(index, 1);
-            localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
+            updateUserInfo();
+            
+            function switchTab(tab) {
+                document.getElementById('panel-generate').style.display = tab === 'generate' ? 'block' : 'none';
+                document.getElementById('panel-auth').style.display = tab === 'auth' ? 'block' : 'none';
+                document.getElementById('nav-generate').className = tab === 'generate' ? 'nav-btn active' : 'nav-btn inactive';
+                document.getElementById('nav-auth').className = tab === 'auth' ? 'nav-btn active' : 'nav-btn inactive';
+                if (tab === 'auth') showLogin();
+            }
+            
+            function showLogin() {
+                document.getElementById('auth-form-login').style.display = 'block';
+                document.getElementById('auth-form-register').style.display = 'none';
+                document.getElementById('auth-status').textContent = '';
+            }
+            
+            function showRegister() {
+                document.getElementById('auth-form-login').style.display = 'none';
+                document.getElementById('auth-form-register').style.display = 'block';
+                document.getElementById('auth-status').textContent = '';
+            }
+            
+            async function login() {
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                const status = document.getElementById('auth-status');
+                if (!email || !password) { status.textContent = 'Заполни все поля'; return; }
+                try {
+                    const res = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+                    if (!res.ok) { const err = await res.json(); status.textContent = '❌ ' + err.detail; }
+                    else {
+                        const user = await res.json();
+                        currentUser = user;
+                        localStorage.setItem('siteforge_user', JSON.stringify(user));
+                        localStorage.setItem('siteforge_pass', password);
+                        status.textContent = '✅ Вход выполнен!';
+                        updateUserInfo();
+                        setTimeout(() => switchTab('generate'), 1000);
+                    }
+                } catch(e) { status.textContent = '❌ Ошибка: ' + e.message; }
+            }
+            
+            async function register() {
+                const email = document.getElementById('reg-email').value;
+                const password = document.getElementById('reg-password').value;
+                const password2 = document.getElementById('reg-password2').value;
+                const status = document.getElementById('auth-status');
+                if (!email || !password || !password2) { status.textContent = 'Заполни все поля'; return; }
+                if (password !== password2) { status.textContent = '❌ Пароли не совпадают'; return; }
+                if (password.length < 4) { status.textContent = '❌ Пароль должен быть не менее 4 символов'; return; }
+                try {
+                    const res = await fetch('/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+                    if (!res.ok) { const err = await res.json(); status.textContent = '❌ ' + err.detail; }
+                    else { status.textContent = '✅ Регистрация успешна! Теперь войди.'; showLogin(); document.getElementById('login-email').value = email; }
+                } catch(e) { status.textContent = '❌ Ошибка: ' + e.message; }
+            }
+            
+            function generate() {
+                if (isGenerating) return;
+                if (!currentUser) { document.getElementById('status').textContent = '❌ Сначала войдите!'; switchTab('auth'); return; }
+                const desc = document.getElementById('desc').value;
+                const status = document.getElementById('status');
+                const frame = document.getElementById('preview-frame');
+                const container = document.getElementById('preview-container');
+                const btn = document.getElementById('generateBtn');
+                const spinner = document.getElementById('spinner');
+                if (!desc) { status.textContent = 'Введи описание!'; return; }
+                if (!currentUser.is_superuser && currentUser.generations_used >= FREE_LIMIT) { status.textContent = '🔒 Лимит исчерпан.'; return; }
+                isGenerating = true; btn.disabled = true; spinner.style.display = 'block'; status.textContent = '⚡ Генерирую...';
+                fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ description: desc, email: currentUser.email, user_password: localStorage.getItem('siteforge_pass') || '' })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) { status.textContent = '❌ ' + data.error; }
+                    else {
+                        if (!currentUser.is_superuser) { currentUser.generations_used++; localStorage.setItem('siteforge_user', JSON.stringify(currentUser)); }
+                        currentHtml = data.html; frame.style.display = 'block'; container.style.display = 'block'; frame.srcdoc = data.html;
+                        status.textContent = '✅ Готово!'; updateUserInfo();
+                    }
+                })
+                .catch(e => { status.textContent = '❌ Ошибка: ' + e.message; })
+                .finally(() => { isGenerating = false; btn.disabled = false; spinner.style.display = 'none'; });
+            }
+            
+            function saveToGallery() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } const title = document.getElementById('desc').value || 'Без названия'; gallery.unshift({ title, html: currentHtml, date: new Date().toLocaleString() }); if (gallery.length > 50) gallery = gallery.slice(0, 50); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); alert('Сохранено!'); }
+            function renderGallery() { const list = document.getElementById('gallery-list'); const visible = gallery.slice(0, galleryVisible); list.innerHTML = visible.map((s, i) => `<div class="site-card" onclick="loadFromGallery(${i})"><div class="flex justify-between items-center"><div><span class="text-sm font-medium">${s.title}</span><span class="text-xs text-gray-500 ml-2">${s.date}</span></div><button onclick="event.stopPropagation(); deleteFromGallery(${i})" class="text-red-400 text-xs hover:text-red-300">Удалить</button></div></div>`).join(''); if (gallery.length > 4 && galleryVisible === 4) list.innerHTML += `<button onclick="showAll()" class="w-full text-center text-sm text-purple-400 hover:text-purple-300 py-2">Показать все (${gallery.length})</button>`; if (!gallery.length) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>'; }
+            function showAll() { galleryVisible = gallery.length; renderGallery(); }
+            function loadFromGallery(i) { const s = gallery[i]; currentHtml = s.html; document.getElementById('desc').value = s.title; const f = document.getElementById('preview-frame'); f.srcdoc = s.html; f.style.display = 'block'; document.getElementById('preview-container').style.display = 'block'; }
+            function deleteFromGallery(i) { if (confirm('Удалить?')) { gallery.splice(i, 1); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
+            function clearGallery() { if (confirm('Удалить ВСЁ?')) { gallery = []; localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
+            function toggleGallery() { const s = document.getElementById('gallery-section'), b = document.getElementById('gallery-toggle'); if (s.style.display === 'block') { s.style.display = 'none'; b.textContent = '📂 Сохранённые шаблоны'; } else { s.style.display = 'block'; b.textContent = '📂 Скрыть шаблоны'; galleryVisible = 4; renderGallery(); } }
+            function copyCode() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } navigator.clipboard.writeText(currentHtml).then(() => alert('Скопировано!')); }
+            function downloadHTML() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } const b = new Blob([currentHtml], {type: 'text/html'}); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = 'шаблон.html'; a.click(); URL.revokeObjectURL(u); }
+            function closePreview() { document.getElementById('preview-frame').style.display = 'none'; document.getElementById('preview-container').style.display = 'none'; currentHtml = ''; }
+            function openModal(t) { document.getElementById(t + '-modal').classList.add('active'); }
+            function closeModal(t) { document.getElementById(t + '-modal').classList.remove('active'); }
+            window.onclick = function(e) { if (e.target.classList.contains('modal')) e.target.classList.remove('active'); }
             renderGallery();
-        }
-    }
-    
-    function clearGallery() {
-        if (confirm('Удалить ВСЁ?')) {
-            gallery = [];
-            localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
-            renderGallery();
-        }
-    }
-    
-    function toggleGallery() {
-        const s = document.getElementById('gallery-section');
-        const b = document.getElementById('gallery-toggle');
-        if (s.style.display === 'block') {
-            s.style.display = 'none';
-            b.textContent = '📂 Сохранённые шаблоны';
-        } else {
-            s.style.display = 'block';
-            b.textContent = '📂 Скрыть шаблоны';
-            galleryVisible = 4;
-            renderGallery();
-        }
-    }
-    
-    function copyCode() {
-        if (!currentHtml) { alert('Сначала создай шаблон!'); return; }
-        navigator.clipboard.writeText(currentHtml).then(() => alert('Скопировано!'));
-    }
-    
-    function downloadHTML() {
-        if (!currentHtml) { alert('Сначала создай шаблон!'); return; }
-        const b = new Blob([currentHtml], {type: 'text/html'});
-        const u = URL.createObjectURL(b);
-        const a = document.createElement('a');
-        a.href = u;
-        a.download = 'шаблон.html';
-        a.click();
-        URL.revokeObjectURL(u);
-    }
-    
-    function closePreview() {
-        document.getElementById('preview-frame').style.display = 'none';
-        document.getElementById('preview-container').style.display = 'none';
-        currentHtml = '';
-    }
-    
-    function openModal(t) { document.getElementById(t + '-modal').classList.add('active'); }
-    function closeModal(t) { document.getElementById(t + '-modal').classList.remove('active'); }
-    window.onclick = function(e) { if (e.target.classList.contains('modal')) e.target.classList.remove('active'); }
-    
-    renderGallery();
-</script>
+        </script>
     </body>
     </html>
     """
