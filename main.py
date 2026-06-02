@@ -119,7 +119,16 @@ def generate_site(req: SiteRequest):
         model="gpt-4o-mini",
         messages=[{
             "role": "system",
-            "content": "Ты генератор HTML-шаблонов. Создай КРАСИВЫЙ адаптивный HTML-шаблон с Tailwind CSS (CDN). Базовые секции (меню, контакты, описание), без лишних функций. Изображения — placeholder.com. Все ссылки неактивны. Градиенты, тени, анимации. Отвечай ТОЛЬКО HTML в ```html ...```."
+            "content": (
+                "Ты генератор HTML-шаблонов. Пользователь описывает, какой шаблон нужен. "
+                "Создай КРАСИВЫЙ современный адаптивный одностраничный HTML-шаблон с Tailwind CSS (подключи через CDN). "
+                "Создавай шаблон с базовыми секциями (меню, контакты, описание), но без лишних функций (спецпредложения, команда, вакансии), если пользователь явно их не просил. "
+                "Для изображений используй заглушки placeholder.com или серый div с рамкой. "
+                "Шаблон должен быть полностью адаптивным для мобильных устройств. "
+                "Все ссылки и кнопки должны быть НЕАКТИВНЫМИ заглушками. "
+                "Используй красивые градиенты, тени, анимации при наведении. "
+                "Отвечай ТОЛЬКО HTML-кодом в ```html ... ```. Без пояснений."
+            )
         }, {
             "role": "user",
             "content": f"Создай шаблон: {req.description}"
@@ -184,15 +193,22 @@ def home():
     </head>
     <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
         <div class="max-w-2xl w-full px-4 mx-auto py-6 relative">
-            <div class="absolute top-4 right-4 flex gap-2">
-                <button onclick="openModal('help')" class="text-gray-500 hover:text-gray-300 text-xs transition">Помощь</button>
-                <button onclick="openModal('about')" class="text-gray-500 hover:text-gray-300 text-xs transition">О нас</button>
+            <!-- Top bar: left=help+about, right=auth+balance -->
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex gap-2">
+                    <button onclick="openModal('help')" class="text-gray-500 hover:text-gray-300 text-xs transition">Помощь</button>
+                    <button onclick="openModal('about')" class="text-gray-500 hover:text-gray-300 text-xs transition">О нас</button>
+                </div>
+                <div class="flex gap-3 items-center">
+                    <span id="balance-display" class="text-xs text-gray-400"></span>
+                    <button id="top-auth-btn" onclick="switchTab('auth')" class="text-purple-400 hover:text-purple-300 text-xs transition">Вход</button>
+                </div>
             </div>
+            
             <div class="text-center mb-6">
                 <div class="text-5xl mb-2">🚀</div>
                 <h1 class="text-3xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">SiteForge</h1>
                 <p class="text-gray-400 mt-1 text-sm">Генератор HTML-шаблонов с помощью ИИ</p>
-                <p id="user-info" class="text-xs text-gray-500 mt-1"></p>
             </div>
             <div class="flex mb-0">
                 <button class="nav-btn active" id="nav-generate" onclick="switchTab('generate')">✨ Генерация</button>
@@ -202,6 +218,8 @@ def home():
                 <div id="panel-generate">
                     <input id="desc" type="text" placeholder="💡 Опиши шаблон, например: лендинг для кофейни" class="input-field" maxlength="500">
                     <button id="generateBtn" onclick="generate()" class="w-full p-4 btn-primary text-lg">✨ Создать шаблон</button>
+                    <div class="spinner" id="spinner"></div>
+                    <p id="status" class="mt-3 text-gray-400 text-xs text-center"></p>
                 </div>
                 <div id="panel-auth" style="display:none;">
                     <div id="auth-form-login">
@@ -221,8 +239,6 @@ def home():
                     </div>
                     <p id="auth-status" class="mt-3 text-xs text-center text-gray-400"></p>
                 </div>
-                <div class="spinner" id="spinner"></div>
-                <p id="status" class="mt-3 text-gray-400 text-xs text-center"></p>
             </div>
             <div id="preview-container">
                 <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
@@ -270,18 +286,23 @@ def home():
             let galleryVisible = 4;
             const FREE_LIMIT = 3;
             
-            function updateUserInfo() {
-                const info = document.getElementById('user-info');
+            function updateUI() {
+                const balance = document.getElementById('balance-display');
+                const authBtn = document.getElementById('top-auth-btn');
                 if (currentUser) {
-                    const left = FREE_LIMIT - currentUser.generations_used;
-                    info.textContent = `👤 ${currentUser.email} | Осталось: ${left > 0 ? left : 0}`;
+                    const left = currentUser.is_superuser ? '∞' : Math.max(0, FREE_LIMIT - currentUser.generations_used);
+                    balance.textContent = `Баланс: ${left}`;
+                    authBtn.textContent = currentUser.email.split('@')[0];
+                    authBtn.className = 'text-green-400 hover:text-green-300 text-xs transition';
                     document.getElementById('nav-auth').textContent = '👤 Профиль';
                 } else {
-                    info.textContent = '';
+                    balance.textContent = '';
+                    authBtn.textContent = 'Вход';
+                    authBtn.className = 'text-purple-400 hover:text-purple-300 text-xs transition';
                     document.getElementById('nav-auth').textContent = '👤 Вход / Регистрация';
                 }
             }
-            updateUserInfo();
+            updateUI();
             
             function switchTab(tab) {
                 document.getElementById('panel-generate').style.display = tab === 'generate' ? 'block' : 'none';
@@ -317,7 +338,7 @@ def home():
                         localStorage.setItem('siteforge_user', JSON.stringify(user));
                         localStorage.setItem('siteforge_pass', password);
                         status.textContent = '✅ Вход выполнен!';
-                        updateUserInfo();
+                        updateUI();
                         setTimeout(() => switchTab('generate'), 1000);
                     }
                 } catch(e) { status.textContent = '❌ Ошибка: ' + e.message; }
@@ -361,7 +382,7 @@ def home():
                     else {
                         if (!currentUser.is_superuser) { currentUser.generations_used++; localStorage.setItem('siteforge_user', JSON.stringify(currentUser)); }
                         currentHtml = data.html; frame.style.display = 'block'; container.style.display = 'block'; frame.srcdoc = data.html;
-                        status.textContent = '✅ Готово!'; updateUserInfo();
+                        status.textContent = '✅ Готово!'; updateUI();
                     }
                 })
                 .catch(e => { status.textContent = '❌ Ошибка: ' + e.message; })
