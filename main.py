@@ -2,12 +2,12 @@ import os
 import re
 import psycopg2
 import psycopg2.extras
+import bcrypt
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from openai import OpenAI
 from dotenv import load_dotenv
-from passlib.hash import bcrypt
 
 load_dotenv()
 
@@ -77,7 +77,7 @@ def register(req: AuthRequest):
         cur.close()
         conn.close()
         raise HTTPException(status_code=400, detail="Email уже зарегистрирован")
-    password_hash = bcrypt.hash(req.password)
+    password_hash = bcrypt.hashpw(req.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     cur.execute("INSERT INTO users (email, password_hash) VALUES (%s, %s) RETURNING id", (req.email, password_hash))
     user_id = cur.fetchone()[0]
     conn.commit()
@@ -93,7 +93,7 @@ def login(req: AuthRequest):
     user = cur.fetchone()
     cur.close()
     conn.close()
-    if not user or not bcrypt.verify(req.password, user["password_hash"]):
+    if not user or not bcrypt.checkpw(req.password.encode('utf-8'), user["password_hash"].encode('utf-8')):
         raise HTTPException(status_code=401, detail="Неверный email или пароль")
     return {"email": user["email"], "generations_used": user["generations_used"], "is_superuser": user["is_superuser"]}
 
@@ -110,7 +110,7 @@ def generate_site(req: SiteRequest):
     user = cur.fetchone()
     cur.close()
     conn.close()
-    if not user or not bcrypt.verify(req.user_password, user["password_hash"]):
+    if not user or not bcrypt.checkpw(req.user_password, user["password_hash"]):
         return {"error": "Неверный email или пароль"}
     if not user["is_superuser"] and user["generations_used"] >= FREE_LIMIT:
         return {"error": f"Лимит исчерпан ({FREE_LIMIT} генераций). Ждите обновлений!"}
