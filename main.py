@@ -230,7 +230,8 @@ def home():
     
     function generate() {
         if (isGenerating) return;
-        if (generationCount >= FREE_LIMIT && password !=='Kolqipx123098') {
+        const pass = document.getElementById('password').value;
+        if (generationCount >= FREE_LIMIT && pass !== 'Kolqipx123098') {
             alert('Лимит бесплатных генераций исчерпан. Ждите обновлений!');
             return;
         }
