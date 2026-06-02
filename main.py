@@ -146,16 +146,16 @@ def generate_site(req: SiteRequest):
             {
                 "role": "system",
                 "content": (
-    "Ты генератор HTML-шаблонов. Пользователь описывает, какой шаблон нужен. "
-    "Создай КРАСИВЫЙ современный адаптивный одностраничный HTML-шаблон с Tailwind CSS (подключи через CDN). "
-    "Создавай шаблон с базовыми секциями (меню, контакты, описание), но без лишних функций (спецпредложения, команда, вакансии), если пользователь явно их не просил. Ориентируйся на классические шаблоны сайтов. "
-    "Для изображений используй заглушки placeholder.com или серый div с рамкой. "
-    "Шаблон должен быть полностью адаптивным для мобильных устройств. "
-    "Не допускай горизонтальной прокрутки на телефонах. "
-    "Все ссылки и кнопки должны быть НЕАКТИВНЫМИ заглушками. "
-    "Используй красивые градиенты, тени, анимации при наведении. "
-    "Отвечай ТОЛЬКО HTML-кодом в ```html ... ```. Без пояснений."
-)
+                    "Ты генератор HTML-шаблонов. Пользователь описывает, какой шаблон нужен. "
+                    "Создай КРАСИВЫЙ современный адаптивный одностраничный HTML-шаблон с Tailwind CSS (подключи через CDN). "
+                    "Создавай шаблон с базовыми секциями (меню, контакты, описание), но без лишних функций (спецпредложения, команда, вакансии), если пользователь явно их не просил. Ориентируйся на классические шаблоны сайтов. "
+                    "Для изображений используй заглушки placeholder.com или серый div с рамкой. "
+                    "Шаблон должен быть полностью адаптивным для мобильных устройств. "
+                    "Не допускай горизонтальной прокрутки на телефонах. "
+                    "Все ссылки и кнопки должны быть НЕАКТИВНЫМИ заглушками. "
+                    "Используй красивые градиенты, тени, анимации при наведении. "
+                    "Отвечай ТОЛЬКО HTML-кодом в ```html ... ```. Без пояснений."
+                )
             },
             {
                 "role": "user",
@@ -214,8 +214,8 @@ def home():
             .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 10px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; }
             .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99,102,241,0.4); }
             .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-            .btn-secondary { background: #374151; color: white; padding: 10px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; }
-            .btn-secondary:hover { background: #4b5563; }
+            .btn-white { background: white; color: #6b21a8; padding: 10px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; }
+            .btn-white:hover { background: #e2e8f0; }
             .site-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px; margin-bottom: 8px; cursor: pointer; }
             .site-card:hover { background: rgba(255,255,255,0.1); }
             .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; }
@@ -271,7 +271,7 @@ def home():
                         <input id="reg-email" type="email" placeholder="Email" class="input-field mb-3">
                         <input id="reg-password" type="password" placeholder="Пароль" class="input-field mb-3">
                         <input id="reg-password2" type="password" placeholder="Подтвердите пароль" class="input-field mb-4">
-                        <button onclick="register()" class="w-full p-3 bg-white text-purple-700 font-bold rounded-xl text-sm mb-2 hover:bg-gray-200 transition">
+                        <button onclick="register()" class="w-full p-3 btn-white text-sm mb-2 font-bold">Зарегистрироваться</button>
                         <p class="text-xs text-gray-400 text-center">
                             Уже есть аккаунт? <a href="#" onclick="showLogin(); return false;" class="text-purple-400 hover:underline">Войти</a>
                         </p>
@@ -495,32 +495,8 @@ def home():
                 });
             }
             
-            function saveToGallery() {
-                if (!currentHtml) { alert('Сначала создай шаблон!'); return; }
-                const title = document.getElementById('desc').value || 'Без названия';
-                gallery.unshift({ title: title, html: currentHtml, date: new Date().toLocaleString() });
-                if (gallery.length > 50) gallery = gallery.slice(0, 50);
-                localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
-                renderGallery();
-                alert('Сохранено!');
-            }
-            
-            function renderGallery() {
-                const list = document.getElementById('gallery-list');
-                list.innerHTML = gallery.map((site, i) => `
-                    <div class="site-card" onclick="loadFromGallery(${i})">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <span class="text-sm font-medium">${site.title}</span>
-                                <span class="text-xs text-gray-500 ml-2">${site.date}</span>
-                            </div>
-                            <button onclick="event.stopPropagation(); deleteFromGallery(${i})" class="text-red-400 text-xs hover:text-red-300">Удалить</button>
-                        </div>
-                    </div>
-                `).join('');
-                if (gallery.length === 0) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>';
-            }
-            
+            function saveToGallery() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } const title = document.getElementById('desc').value || 'Без названия'; gallery.unshift({ title: title, html: currentHtml, date: new Date().toLocaleString() }); if (gallery.length > 50) gallery = gallery.slice(0, 50); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); alert('Сохранено!'); }
+            function renderGallery() { const list = document.getElementById('gallery-list'); list.innerHTML = gallery.map((site, i) => `<div class="site-card" onclick="loadFromGallery(${i})"><div class="flex justify-between items-center"><div><span class="text-sm font-medium">${site.title}</span><span class="text-xs text-gray-500 ml-2">${site.date}</span></div><button onclick="event.stopPropagation(); deleteFromGallery(${i})" class="text-red-400 text-xs hover:text-red-300">Удалить</button></div></div>`).join(''); if (gallery.length === 0) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>'; }
             function loadFromGallery(index) { const site = gallery[index]; currentHtml = site.html; document.getElementById('desc').value = site.title; document.getElementById('preview-frame').srcdoc = site.html; document.getElementById('preview-frame').style.display = 'block'; document.getElementById('preview-container').style.display = 'block'; }
             function deleteFromGallery(index) { if (confirm('Удалить?')) { gallery.splice(index, 1); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
             function clearGallery() { if (confirm('Удалить ВСЁ?')) { gallery = []; localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
