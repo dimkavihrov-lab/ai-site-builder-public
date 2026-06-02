@@ -254,7 +254,7 @@ def home():
                         <h3 class="text-sm font-bold mb-3">Вход</h3>
                         <input id="login-email" type="email" placeholder="Email" class="input-field">
                         <input id="login-password" type="password" placeholder="Пароль" class="input-field">
-                        <button onclick="login()" class="w-full p-3 btn-primary text-sm mb-2">Войти</button>
+                        <button onclick="login(localStorage.setItem('siteforge_pass', password);)" class="w-full p-3 btn-primary text-sm mb-2">Войти</button>
                         <p class="text-xs text-gray-400 text-center">
                             Нет аккаунта? <a href="#" onclick="showRegister(); return false;" class="text-white font-bold hover:underline">Зарегистрироваться</a>
                         </p>
@@ -264,7 +264,7 @@ def home():
                         <input id="reg-email" type="email" placeholder="Email" class="input-field">
                         <input id="reg-password" type="password" placeholder="Пароль" class="input-field">
                         <input id="reg-password2" type="password" placeholder="Подтвердите пароль" class="input-field">
-                        <button onclick="register()" class="w-full p-3 btn-white text-sm font-bold">Зарегистрироваться</button>
+                        <button onclick="register()" class="w-full p-3 btn-primary text-sm font-bold">Зарегистрироваться</button>
                         <p class="text-xs text-gray-400 text-center mt-2">
                             Уже есть аккаунт? <a href="#" onclick="showLogin(); return false;" class="text-white font-bold hover:underline">Войти</a>
                         </p>
@@ -468,7 +468,7 @@ def home():
                     body: JSON.stringify({
                         description: desc,
                         email: currentUser.email,
-                        user_password: currentUser.email
+                        user_password: localStorage.getItem('siteforge_pass') || ''
                     })
                 })
                 .then(res => res.json())
@@ -497,11 +497,63 @@ def home():
             }
             
             function saveToGallery() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } const title = document.getElementById('desc').value || 'Без названия'; gallery.unshift({ title, html: currentHtml, date: new Date().toLocaleString() }); if (gallery.length > 50) gallery = gallery.slice(0, 50); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); alert('Сохранено!'); }
-            function renderGallery() { const list = document.getElementById('gallery-list'); list.innerHTML = gallery.map((site, i) => `<div class="site-card" onclick="loadFromGallery(${i})"><div class="flex justify-between items-center"><div><span class="text-sm font-medium">${site.title}</span><span class="text-xs text-gray-500 ml-2">${site.date}</span></div><button onclick="event.stopPropagation(); deleteFromGallery(${i})" class="text-red-400 text-xs hover:text-red-300">Удалить</button></div></div>`).join(''); if (!gallery.length) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>'; }
+            let galleryVisible = 4;
+
+function renderGallery() {
+    const list = document.getElementById('gallery-list');
+    const visible = gallery.slice(0, galleryVisible);
+    list.innerHTML = visible.map((site, i) => `
+        <div class="site-card" onclick="loadFromGallery(${i})">
+            <div class="flex justify-between items-center">
+                <div>
+                    <span class="text-sm font-medium">${site.title}</span>
+                    <span class="text-xs text-gray-500 ml-2">${site.date}</span>
+                </div>
+                <button onclick="event.stopPropagation(); deleteFromGallery(${i})" class="text-red-400 text-xs hover:text-red-300">Удалить</button>
+            </div>
+        </div>
+    `).join('');
+    
+    if (gallery.length > 4 && galleryVisible === 4) {
+        list.innerHTML += `<button onclick="showAll()" class="w-full text-center text-sm text-purple-400 hover:text-purple-300 py-2">Показать все (${gallery.length})</button>`;
+    }
+    if (!gallery.length) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>';
+}
+
+function showAll() {
+    galleryVisible = gallery.length;
+    renderGallery();
+}
             function loadFromGallery(index) { const s = gallery[index]; currentHtml = s.html; document.getElementById('desc').value = s.title; const f = document.getElementById('preview-frame'); f.srcdoc = s.html; f.style.display = 'block'; document.getElementById('preview-container').style.display = 'block'; }
             function deleteFromGallery(index) { if (confirm('Удалить?')) { gallery.splice(index, 1); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
             function clearGallery() { if (confirm('Удалить ВСЁ?')) { gallery = []; localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
-            function toggleGallery() { const s = document.getElementById('gallery-section'); const b = document.getElementById('gallery-toggle'); if (s.style.display === 'block') { s.style.display = 'none'; b.textContent = '📂 Сохранённые шаблоны'; } else { s.style.display = 'block'; b.textContent = '📂 Скрыть шаблоны'; renderGallery(); } }
+           let galleryVisible = 50;
+
+function renderGallery() {
+    const list = document.getElementById('gallery-list');
+    const visible = gallery.slice(0, galleryVisible);
+    list.innerHTML = visible.map((site, i) => `
+        <div class="site-card" onclick="loadFromGallery(${i})">
+            <div class="flex justify-between items-center">
+                <div>
+                    <span class="text-sm font-medium">${site.title}</span>
+                    <span class="text-xs text-gray-500 ml-2">${site.date}</span>
+                </div>
+                <button onclick="event.stopPropagation(); deleteFromGallery(${i})" class="text-red-400 text-xs hover:text-red-300">Удалить</button>
+            </div>
+        </div>
+    `).join('');
+    
+    if (gallery.length > 4 && galleryVisible === 4) {
+        list.innerHTML += `<button onclick="showAll()" class="w-full text-center text-sm text-purple-400 hover:text-purple-300 py-2">Показать все (${gallery.length})</button>`;
+    }
+    if (!gallery.length) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>';
+}
+
+function showAll() {
+    galleryVisible = gallery.length;
+    renderGallery();
+}
             function copyCode() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } navigator.clipboard.writeText(currentHtml).then(() => alert('Скопировано!')); }
             function downloadHTML() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } const b = new Blob([currentHtml], {type: 'text/html'}); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = 'шаблон.html'; a.click(); URL.revokeObjectURL(u); }
             function closePreview() { document.getElementById('preview-frame').style.display = 'none'; document.getElementById('preview-container').style.display = 'none'; currentHtml = ''; }
