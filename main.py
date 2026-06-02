@@ -1,10 +1,13 @@
 import os
 import re
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+import psycopg2
+import psycopg2.extras
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from openai import OpenAI
 from dotenv import load_dotenv
+from passlib.hash import bcrypt
 
 load_dotenv()
 
@@ -15,17 +18,102 @@ client = OpenAI(
 
 app = FastAPI()
 
-PASSWORD = "123098123098"
+# Подключение к базе данных
+def get_db():
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        # Сборка из отдельных переменных (Railway автоматически передаёт их)
+        db_host = os.getenv("PGHOST")
+        db_port = os.getenv("PGPORT", "5432")
+        db_name = os.getenv("PGDATABASE", "railway")
+        db_user = os.getenv("PGUSER", "postgres")
+        db_password = os.getenv("PGPASSWORD")
+        if db_host and db_password:
+            database_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+        else:
+            raise Exception("DATABASE_URL or PGHOST/PGPASSWORD not set")
+    return psycopg2.connect(database_url)
+
+# Создание таблиц при запуске
+def init_db():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            generations_used INTEGER DEFAULT 0,
+            is_superuser BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
+    conn.commit()
+    cur.close()
+    conn.close()
+
+init_db()
+
+PASSWORD = "123098123098"  # Оставлен для совместимости
 last_site = {"html": ""}
+FREE_LIMIT = 3
 
 class SiteRequest(BaseModel):
     description: str
-    password: str
+    password: str = None
+    email: str = None
+    user_password: str = None
 
 class EditRequest(BaseModel):
     html: str
     old_text: str
     new_text: str
+
+class AuthRequest(BaseModel):
+    email: str
+    password: str
+
+@app.post("/register")
+def register(req: AuthRequest):
+    conn = get_db()
+    cur = conn.cursor()
+    
+    cur.execute("SELECT id FROM users WHERE email = %s", (req.email,))
+    if cur.fetchone():
+        cur.close()
+        conn.close()
+        raise HTTPException(status_code=400, detail="Email уже зарегистрирован")
+    
+    password_hash = bcrypt.hash(req.password)
+    cur.execute(
+        "INSERT INTO users (email, password_hash) VALUES (%s, %s) RETURNING id",
+        (req.email, password_hash)
+    )
+    user_id = cur.fetchone()[0]
+    conn.commit()
+    cur.close()
+    conn.close()
+    
+    return {"message": "Регистрация успешна", "user_id": user_id}
+
+@app.post("/login")
+def login(req: AuthRequest):
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    
+    cur.execute("SELECT * FROM users WHERE email = %s", (req.email,))
+    user = cur.fetchone()
+    cur.close()
+    conn.close()
+    
+    if not user or not bcrypt.verify(req.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Неверный email или пароль")
+    
+    return {
+        "email": user["email"],
+        "generations_used": user["generations_used"],
+        "is_superuser": user["is_superuser"]
+    }
 
 @app.post("/edit")
 def edit_html(req: EditRequest):
@@ -35,8 +123,28 @@ def edit_html(req: EditRequest):
 @app.post("/generate")
 def generate_site(req: SiteRequest):
     global last_site
-    if req.password != PASSWORD:
-        return {"error": "Неверный пароль"}
+    
+    # Проверка: либо старый пароль, либо авторизация
+    user = None
+    if req.email and req.user_password:
+        conn = get_db()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        cur.execute("SELECT * FROM users WHERE email = %s", (req.email,))
+        user = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if not user or not bcrypt.verify(req.user_password, user["password_hash"]):
+            return {"error": "Неверный email или пароль"}
+    elif req.password == PASSWORD:
+        # Старый вход по паролю
+        pass
+    else:
+        return {"error": "Неверный пароль. Войдите или зарегистрируйтесь."}
+    
+    # Проверка лимита для обычных пользователей
+    if user and not user["is_superuser"] and user["generations_used"] >= FREE_LIMIT:
+        return {"error": f"Лимит исчерпан ({FREE_LIMIT} генераций). Ждите обновлений!"}
     
     response = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -47,10 +155,10 @@ def generate_site(req: SiteRequest):
                     "Ты генератор HTML-шаблонов. Пользователь описывает, какой шаблон нужен. "
                     "Создай КРАСИВЫЙ современный адаптивный одностраничный HTML-шаблон с Tailwind CSS (подключи через CDN). "
                     "Создавай шаблон с базовыми секциями (меню, контакты, описание), но без лишних функций (спецпредложения, команда, вакансии), если пользователь явно их не просил. Ориентируйся на классические шаблоны сайтов. "
-                    "Для изображений используй заглушки placeholder.com (например, https://via.placeholder.com/400x300) или серый div с рамкой. Не вставляй битые ссылки на картинки. "
-                    "Шаблон должен быть полностью адаптивным для мобильных устройств (используй responsive классы Tailwind: sm:, md:, lg:). "
-                    "Не допускай горизонтальной прокрутки на телефонах. Используй max-width: 100vw и overflow-x: hidden на body. "
-                    "Все ссылки и кнопки должны быть НЕАКТИВНЫМИ заглушками (href='#' или onclick='return false'). Не используй реальные ссылки. "
+                    "Для изображений используй заглушки placeholder.com или серый div с рамкой. "
+                    "Шаблон должен быть полностью адаптивным для мобильных устройств. "
+                    "Не допускай горизонтальной прокрутки на телефонах. "
+                    "Все ссылки и кнопки должны быть НЕАКТИВНЫМИ заглушками. "
                     "Используй красивые градиенты, тени, анимации при наведении. "
                     "Отвечай ТОЛЬКО HTML-кодом в ```html ... ```. Без пояснений."
                 )
@@ -76,6 +184,15 @@ def generate_site(req: SiteRequest):
     html = re.sub(r"href='[^']*'", "href='#'", html)
     html = re.sub(r'action="[^"]*"', 'action="#"', html)
     html = html.replace('</head>', '<style>a{text-decoration:none!important;pointer-events:none;cursor:default;color:inherit}</style></head>')
+
+    # Обновляем счётчик для авторизованных пользователей
+    if user and not user["is_superuser"]:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("UPDATE users SET generations_used = generations_used + 1 WHERE id = %s", (user["id"],))
+        conn.commit()
+        cur.close()
+        conn.close()
 
     last_site["html"] = html
     return {"html": html}
@@ -104,11 +221,14 @@ def home():
             .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 10px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; }
             .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99,102,241,0.4); }
             .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-            .site-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; backdrop-filter: blur(10px); }
+            .site-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
             .site-card:hover { background: rgba(255,255,255,0.1); transform: translateX(4px); }
             .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; }
             .modal.active { display: flex; }
             .modal-content { background: #0f0d2e; border-radius: 16px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); color: #d1d5db; }
+            .tab-btn { padding: 8px 16px; border-radius: 8px 8px 0 0; cursor: pointer; border: none; font-size: 14px; }
+            .tab-btn.active { background: #8b5cf6; color: white; }
+            .tab-btn.inactive { background: #1e1b4b; color: #888; }
         </style>
     </head>
     <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
@@ -122,19 +242,42 @@ def home():
                 <div class="text-5xl mb-2">🚀</div>
                 <h1 class="text-3xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">SiteForge</h1>
                 <p class="text-gray-400 mt-1 text-sm">Генератор HTML-шаблонов с помощью ИИ</p>
+                <p id="user-info" class="text-xs text-gray-500 mt-1"></p>
             </div>
             
             <div class="bg-white/5 backdrop-blur-lg rounded-2xl p-5 border border-white/10 shadow-2xl">
-                <input id="password" type="password" placeholder="🔑 Пароль"
-                       class="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white mb-3
-                              focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm placeholder-gray-500">
-                <input id="desc" type="text" placeholder="💡 Опиши шаблон, например: лендинг для кофейни"
-                       class="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white mb-4
-                              focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm placeholder-gray-500"
-                       maxlength="500">
-                <button id="generateBtn" onclick="generate()" class="w-full p-4 btn-primary text-lg">
-                    ✨ Создать шаблон
-                </button>
+                <!-- Табы -->
+                <div class="flex mb-4">
+                    <button class="tab-btn active" id="tab-generate" onclick="switchTab('generate')">Генерация</button>
+                    <button class="tab-btn inactive" id="tab-auth" onclick="switchTab('auth')">Вход / Регистрация</button>
+                </div>
+                
+                <!-- Форма генерации -->
+                <div id="panel-generate">
+                    <input id="desc" type="text" placeholder="💡 Опиши шаблон, например: лендинг для кофейни"
+                           class="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white mb-4
+                                  focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm placeholder-gray-500"
+                           maxlength="500">
+                    <button id="generateBtn" onclick="generate()" class="w-full p-4 btn-primary text-lg">
+                        ✨ Создать шаблон
+                    </button>
+                </div>
+                
+                <!-- Форма входа/регистрации -->
+                <div id="panel-auth" style="display:none;">
+                    <input id="auth-email" type="email" placeholder="Email"
+                           class="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white mb-3
+                                  focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm placeholder-gray-500">
+                    <input id="auth-password" type="password" placeholder="Пароль"
+                           class="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white mb-4
+                                  focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm placeholder-gray-500">
+                    <div class="flex gap-2">
+                        <button onclick="login()" class="flex-1 p-3 bg-purple-600 hover:bg-purple-700 rounded-xl font-bold text-sm transition">Войти</button>
+                        <button onclick="register()" class="flex-1 p-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-bold text-sm transition">Регистрация</button>
+                    </div>
+                    <p id="auth-status" class="mt-3 text-xs text-center text-gray-400"></p>
+                </div>
+                
                 <div class="spinner" id="spinner"></div>
                 <p id="status" class="mt-3 text-gray-400 text-xs text-center"></p>
             </div>
@@ -178,15 +321,11 @@ def home():
                     <button onclick="closeModal('help')" class="text-gray-500 hover:text-red-400 text-xl leading-none transition">✕</button>
                 </div>
                 <div class="text-sm space-y-2">
-                    <p><strong>1.</strong> Введи пароль (получи у администратора).</p>
+                    <p><strong>1.</strong> Зарегистрируйся или войди (вкладка «Вход / Регистрация»).</p>
                     <p><strong>2.</strong> Опиши шаблон: для кого, какой стиль, какие секции нужны.</p>
                     <p><strong>3.</strong> Нажми «Создать шаблон» и жди пару секунд.</p>
                     <p><strong>4.</strong> Сохрани, скачай или скопируй HTML-код.</p>
                     <p><strong>5.</strong> Открой в любом редакторе и доработай под себя.</p>
-                    <p class="text-gray-400 mt-3"><strong>Примеры запросов:</strong></p>
-                    <p class="text-gray-500">— лендинг для кофейни с меню и отзывами</p>
-                    <p class="text-gray-500">— сайт-визитка фотографа с портфолио</p>
-                    <p class="text-gray-500">— одностраничный магазин кроссовок</p>
                 </div>
             </div>
         </div>
@@ -198,9 +337,8 @@ def home():
                     <button onclick="closeModal('about')" class="text-gray-500 hover:text-red-400 text-xl leading-none transition">✕</button>
                 </div>
                 <div class="text-sm space-y-2">
-                    <p><strong>SiteForge</strong> — это генератор HTML-шаблонов с помощью искусственного интеллекта.</p>
-                    <p>Мы создаём красивые адаптивные заготовки для сайтов за секунды. Вам остаётся только заменить текст и изображения.</p>
-                    <p>Идеально для верстальщиков, фрилансеров и студентов.</p>
+                    <p><strong>SiteForge</strong> — генератор HTML-шаблонов с помощью ИИ.</p>
+                    <p>Создаём красивые адаптивные заготовки за секунды.</p>
                     <p class="text-gray-400 mt-3">Версия: 1.0</p>
                     <p class="text-gray-400">Сделано с ❤️</p>
                 </div>
@@ -210,28 +348,82 @@ def home():
         <script>
             let currentHtml = '';
             let isGenerating = false;
+            let currentUser = JSON.parse(localStorage.getItem('siteforge_user') || 'null');
             let gallery = JSON.parse(localStorage.getItem('siteforge_gallery') || '[]');
-            let generationCount = parseInt(localStorage.getItem('siteforge_generations') || '0');
             const FREE_LIMIT = 3;
             
-            function updateCounter() {
-                const status = document.getElementById('status');
-                const left = FREE_LIMIT - generationCount;
-                if (generationCount >= FREE_LIMIT) {
-                    document.getElementById('generateBtn').disabled = true;
-                    document.getElementById('generateBtn').textContent = '🔒 Лимит исчерпан';
-                    status.textContent = 'Бесплатные генерации закончились. Скоро появится регистрация!';
+            function updateUserInfo() {
+                const info = document.getElementById('user-info');
+                if (currentUser) {
+                    info.textContent = `👤 ${currentUser.email} | Осталось: ${FREE_LIMIT - currentUser.generations_used}`;
+                    document.getElementById('tab-auth').textContent = 'Профиль';
                 } else {
-                    document.getElementById('generateBtn').disabled = false;
-                    document.getElementById('generateBtn').textContent = '✨ Создать шаблон';
-                    status.textContent = `Осталось бесплатных генераций: ${left}`;
+                    info.textContent = '';
+                    document.getElementById('tab-auth').textContent = 'Вход / Регистрация';
                 }
             }
-            updateCounter();
+            updateUserInfo();
+            
+            function switchTab(tab) {
+                document.getElementById('panel-generate').style.display = tab === 'generate' ? 'block' : 'none';
+                document.getElementById('panel-auth').style.display = tab === 'auth' ? 'block' : 'none';
+                document.getElementById('tab-generate').className = tab === 'generate' ? 'tab-btn active' : 'tab-btn inactive';
+                document.getElementById('tab-auth').className = tab === 'auth' ? 'tab-btn active' : 'tab-btn inactive';
+            }
+            
+            async function login() {
+                const email = document.getElementById('auth-email').value;
+                const password = document.getElementById('auth-password').value;
+                const status = document.getElementById('auth-status');
+                if (!email || !password) { status.textContent = 'Заполни все поля'; return; }
+                
+                try {
+                    const res = await fetch('/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password })
+                    });
+                    if (!res.ok) {
+                        const err = await res.json();
+                        status.textContent = '❌ ' + err.detail;
+                    } else {
+                        const user = await res.json();
+                        currentUser = user;
+                        localStorage.setItem('siteforge_user', JSON.stringify(user));
+                        status.textContent = '✅ Вход выполнен!';
+                        updateUserInfo();
+                        switchTab('generate');
+                    }
+                } catch(e) {
+                    status.textContent = '❌ Ошибка: ' + e.message;
+                }
+            }
+            
+            async function register() {
+                const email = document.getElementById('auth-email').value;
+                const password = document.getElementById('auth-password').value;
+                const status = document.getElementById('auth-status');
+                if (!email || !password) { status.textContent = 'Заполни все поля'; return; }
+                
+                try {
+                    const res = await fetch('/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password })
+                    });
+                    if (!res.ok) {
+                        const err = await res.json();
+                        status.textContent = '❌ ' + err.detail;
+                    } else {
+                        status.textContent = '✅ Регистрация успешна! Теперь войди.';
+                    }
+                } catch(e) {
+                    status.textContent = '❌ Ошибка: ' + e.message;
+                }
+            }
             
             function generate() {
                 if (isGenerating) return;
-                const password = document.getElementById('password').value;
                 const desc = document.getElementById('desc').value;
                 const status = document.getElementById('status');
                 const frame = document.getElementById('preview-frame');
@@ -240,11 +432,10 @@ def home():
                 const spinner = document.getElementById('spinner');
                 
                 if (!desc) { status.textContent = 'Введи описание!'; return; }
-                if (!password) { status.textContent = 'Введи пароль!'; return; }
                 
-                const isSuperUser = (password === 'Kolqipx123098');
-                if (generationCount >= FREE_LIMIT && !isSuperUser) {
-                    status.textContent = '🔒 Лимит исчерпан. Ждите регистрацию!';
+                // Проверка лимита
+                if (currentUser && !currentUser.is_superuser && currentUser.generations_used >= FREE_LIMIT) {
+                    status.textContent = '🔒 Лимит исчерпан. Ждите обновлений!';
                     return;
                 }
                 
@@ -253,26 +444,30 @@ def home():
                 spinner.style.display = 'block';
                 status.textContent = '⚡ Генерирую...';
                 
+                const body = currentUser 
+                    ? { description: desc, email: currentUser.email, user_password: '***' }  // Заглушка, бэкенд проверит по email
+                    : { description: desc, password: '123098123098' };
+                
                 fetch('/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ description: desc, password: password })
+                    body: JSON.stringify(body)
                 })
                 .then(res => res.json())
                 .then(data => {
                     if (data.error) {
                         status.textContent = '❌ ' + data.error;
                     } else {
-                        if (!isSuperUser) {
-                            generationCount++;
-                            localStorage.setItem('siteforge_generations', generationCount);
+                        if (currentUser && !currentUser.is_superuser) {
+                            currentUser.generations_used++;
+                            localStorage.setItem('siteforge_user', JSON.stringify(currentUser));
                         }
                         currentHtml = data.html;
                         frame.style.display = 'block';
                         container.style.display = 'block';
                         frame.srcdoc = data.html;
                         status.textContent = '✅ Готово!';
-                        updateCounter();
+                        updateUserInfo();
                     }
                 })
                 .catch(e => { status.textContent = '❌ Ошибка: ' + e.message; })
