@@ -144,7 +144,7 @@ def generate_site(req: SiteRequest):
     html = re.sub(r'(<a\b[^>]*?)href="[^"]*"', r'\1href="#"', html)
     html = re.sub(r"(<a\b[^>]*?)href='[^']*'", r"\1href='#'", html)
     html = re.sub(r'action="[^"]*"', 'action="#"', html)
-    html = html.replace('</head>', '<style>a{text-decoration:none!important;pointer-events:none;cursor:default;color:inherit}</style></head>')
+    html = html.replace('</head>', '<style>body{background:#f3f4f6!important;max-width:100vw!important;overflow-x:hidden!important}a{text-decoration:none!important;pointer-events:none;cursor:default;color:inherit}</style></head>')
 
     if not user["is_superuser"]:
         conn = get_db()
