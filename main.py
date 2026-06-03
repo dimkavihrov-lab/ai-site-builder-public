@@ -119,15 +119,15 @@ def generate_site(req: SiteRequest):
         messages=[{
             "role": "system",
             "content": (
-    "Ты генератор HTML-шаблонов. Пользователь описывает, какой шаблон нужен. "
-    "Создай КРАСИВЫЙ современный адаптивный одностраничный HTML-шаблон с Tailwind CSS (подключи через CDN). "
-    "Создавай шаблон с базовыми секциями (меню, контакты, описание), но без лишних функций (спецпредложения, команда, вакансии), если пользователь явно их не просил. "
-    "Для изображений используй заглушки placeholder.com или серый div с рамкой. "
-    "Шаблон должен быть полностью адаптивным для мобильных устройств. "
-    "Не допускай горизонтальной прокрутки на телефонах. Используй max-width: 100vw и overflow-x: hidden на body. "
-    "Все ссылки и кнопки должны быть НЕАКТИВНЫМИ заглушками. "
-    "Используй красивые градиенты, тени, анимации при наведении. "
-    "Отвечай ТОЛЬКО HTML-кодом в ```html ... ```. Без пояснений."
+                "Ты генератор HTML-шаблонов. Пользователь описывает, какой шаблон нужен. "
+                "Создай КРАСИВЫЙ современный адаптивный одностраничный HTML-шаблон с Tailwind CSS (подключи через CDN). "
+                "Создавай шаблон с базовыми секциями (меню, контакты, описание), но без лишних функций (спецпредложения, команда, вакансии), если пользователь явно их не просил. "
+                "Для изображений используй заглушки placeholder.com или серый div с рамкой. "
+                "Шаблон должен быть полностью адаптивным для мобильных устройств. "
+                "Не допускай горизонтальной прокрутки на телефонах. Используй max-width: 100vw и overflow-x: hidden на body. "
+                "Все ссылки и кнопки должны быть НЕАКТИВНЫМИ заглушками. "
+                "Используй красивые градиенты, тени, анимации при наведении. "
+                "Отвечай ТОЛЬКО HTML-кодом в ```html ... ```. Без пояснений."
             )
         }, {"role": "user", "content": f"Создай шаблон: {req.description}"}],
         temperature=0.8, max_tokens=4000
@@ -138,9 +138,7 @@ def generate_site(req: SiteRequest):
 
     html = re.sub(r'(<a\b[^>]*?)href="[^"]*"', r'\1href="#"', html)
     html = re.sub(r"(<a\b[^>]*?)href='[^']*'", r"\1href='#'", html)
-    html = re.sub(r'action="[^"]*"', 'action="#"', html) 
-    html = html.replace('<body', '<body style="background:#f3f4f6"', 1)
-
+    html = re.sub(r'action="[^"]*"', 'action="#"', html)
     html = html.replace('</head>', '<style>body{max-width:100vw!important;overflow-x:hidden!important}a{text-decoration:none!important;pointer-events:none;cursor:default;color:inherit}</style></head>')
 
     if not user["is_superuser"]:
@@ -193,6 +191,7 @@ def home():
             .copy-menu.active .copy-dropdown { display: block; }
             .copy-option { display: block; width: 100%; padding: 8px 12px; text-align: left; background: none; border: none; color: #d1d5db; font-size: 13px; cursor: pointer; border-radius: 8px; }
             .copy-option:hover { background: rgba(139,92,246,0.2); color: white; }
+            .editable-hint { position: absolute; background: #8b5cf6; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; pointer-events: none; display: none; z-index: 200; }
         </style>
     </head>
     <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
@@ -206,27 +205,19 @@ def home():
                     <span id="balance-display" class="text-sm text-white font-bold"></span>
                     <a href="/auth" id="top-auth-link" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition font-medium">Войти</a>
                     <a href="/profile" id="top-avatar-link" style="display:none;">
-                        <div class="top-avatar-wrapper">
-                            <div class="avatar" id="avatar-icon"></div>
-                            <span class="top-email" id="avatar-email"></span>
-                        </div>
+                        <div class="top-avatar-wrapper"><div class="avatar" id="avatar-icon"></div><span class="top-email" id="avatar-email"></span></div>
                     </a>
                 </div>
             </div>
-            <div class="text-center mb-8">
-                <div class="text-5xl mb-2">🚀</div>
-                <h1 class="text-4xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">SiteForge</h1>
-                <p class="text-gray-400 mt-2 text-sm">Создай HTML-шаблон за секунды</p>
-            </div>
+            <div class="text-center mb-8"><div class="text-5xl mb-2">🚀</div><h1 class="text-4xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">SiteForge</h1><p class="text-gray-400 mt-2 text-sm">Создай HTML-шаблон за секунды</p></div>
             <div class="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 shadow-2xl">
                 <input id="desc" type="text" placeholder="💡 Опиши шаблон, например: лендинг для кофейни" class="input-field" maxlength="500">
                 <button id="generateBtn" onclick="generate()" class="w-full p-4 btn-primary text-lg">✨ Создать шаблон</button>
-                <div class="spinner" id="spinner"></div>
-                <p id="status" class="mt-4 text-gray-400 text-xs text-center"></p>
+                <div class="spinner" id="spinner"></div><p id="status" class="mt-4 text-gray-400 text-xs text-center"></p>
             </div>
             <div id="preview-container">
                 <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
-                    <span class="text-sm text-gray-300">Предпросмотр</span>
+                    <span class="text-sm text-gray-300">Предпросмотр | <button onclick="toggleEditMode()" id="edit-mode-btn" class="text-purple-400 hover:underline text-xs">✏️ Редактировать текст</button></span>
                     <div class="flex gap-1 flex-wrap items-center">
                         <button onclick="saveToGallery()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">💾</button>
                         <button onclick="downloadHTML()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">📥</button>
@@ -243,226 +234,111 @@ def home():
                 </div>
                 <iframe id="preview-frame"></iframe>
             </div>
-            <div id="gallery-section" style="display:none; margin-top: 30px;">
-                <div class="flex justify-between items-center mb-4"><h2 class="text-lg font-bold">📂 Мои шаблоны</h2><button onclick="clearGallery()" class="text-xs text-gray-500 hover:text-red-400">Очистить</button></div>
-                <div id="gallery-list"></div>
-            </div>
+            <div id="gallery-section" style="display:none; margin-top: 30px;"><div class="flex justify-between items-center mb-4"><h2 class="text-lg font-bold">📂 Мои шаблоны</h2><button onclick="clearGallery()" class="text-xs text-gray-500 hover:text-red-400">Очистить</button></div><div id="gallery-list"></div></div>
             <div class="text-center mt-4"><button onclick="toggleGallery()" class="text-sm text-gray-400 hover:text-white transition" id="gallery-toggle">📂 Сохранённые шаблоны</button></div>
         </div>
-        <div id="help-modal" class="modal">
-            <div class="modal-content">
-                <div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">Как пользоваться</h2><button onclick="closeModal('help')" class="text-gray-500 hover:text-red-400 text-xl leading-none transition">✕</button></div>
-                <div class="text-sm space-y-2"><p><strong>1.</strong> Зарегистрируйся или войди.</p><p><strong>2.</strong> Опиши шаблон.</p><p><strong>3.</strong> Нажми «Создать».</p><p><strong>4.</strong> Копируй HTML, CSS или скачай файл.</p></div>
-            </div>
-        </div>
-        <div id="about-modal" class="modal">
-            <div class="modal-content">
-                <div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">О нас</h2><button onclick="closeModal('about')" class="text-gray-500 hover:text-red-400 text-xl leading-none transition">✕</button></div>
-                <div class="text-sm space-y-2"><p><strong>SiteForge</strong> — генератор HTML-шаблонов с помощью ИИ.</p><p class="text-gray-400 mt-3">Версия: 1.0 | Сделано с ❤️</p></div>
-            </div>
-        </div>
+        <div id="help-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">Как пользоваться</h2><button onclick="closeModal('help')" class="text-gray-500 hover:text-red-400 text-xl">✕</button></div><div class="text-sm space-y-2"><p><strong>1.</strong> Зарегистрируйся или войди.</p><p><strong>2.</strong> Опиши шаблон.</p><p><strong>3.</strong> Нажми «Создать».</p><p><strong>4.</strong> Нажми «✏️ Редактировать» и кликай на текст.</p><p><strong>5.</strong> Копируй или скачай готовый HTML.</p></div></div></div>
+        <div id="about-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">О нас</h2><button onclick="closeModal('about')" class="text-gray-500 hover:text-red-400 text-xl">✕</button></div><div class="text-sm space-y-2"><p><strong>SiteForge</strong> — генератор HTML-шаблонов с помощью ИИ.</p><p class="text-gray-400 mt-3">Версия: 1.0 | Сделано с ❤️</p></div></div></div>
+        <div class="editable-hint" id="edit-hint">Нажмите на текст чтобы изменить</div>
         <script>
-            let currentHtml = '', isGenerating = false;
+            let currentHtml = '', isGenerating = false, editMode = false;
             let currentUser = JSON.parse(localStorage.getItem('siteforge_user') || 'null');
             let gallery = JSON.parse(localStorage.getItem('siteforge_gallery') || '[]');
             let galleryVisible = 4;
             const FREE_LIMIT = 3;
             
             function updateTopBar() {
-                const balance = document.getElementById('balance-display');
-                const authLink = document.getElementById('top-auth-link');
-                const avatarLink = document.getElementById('top-avatar-link');
-                const avatarIcon = document.getElementById('avatar-icon');
-                const avatarEmail = document.getElementById('avatar-email');
+                const b = document.getElementById('balance-display'), a = document.getElementById('top-auth-link'), l = document.getElementById('top-avatar-link'), i = document.getElementById('avatar-icon'), e = document.getElementById('avatar-email');
                 if (currentUser) {
                     const left = currentUser.is_superuser ? '∞' : Math.max(0, FREE_LIMIT - currentUser.generations_used);
-                    balance.textContent = 'Баланс: ' + left + ' ген.';
-                    authLink.style.display = 'none';
-                    avatarLink.style.display = 'block';
-                    avatarIcon.textContent = currentUser.email.charAt(0).toUpperCase();
-                    avatarEmail.textContent = currentUser.email.split('@')[0];
-                } else {
-                    balance.textContent = '';
-                    authLink.style.display = 'block';
-                    avatarLink.style.display = 'none';
-                }
+                    b.textContent = 'Баланс: ' + left + ' ген.'; a.style.display = 'none'; l.style.display = 'block';
+                    i.textContent = currentUser.email.charAt(0).toUpperCase(); e.textContent = currentUser.email.split('@')[0];
+                } else { b.textContent = ''; a.style.display = 'block'; l.style.display = 'none'; }
             }
             updateTopBar();
             
             function generate() {
                 if (isGenerating) return;
-                if (!currentUser) {
-                    document.getElementById('status').textContent = '❌ Сначала войдите!';
-                    window.location.href = '/auth';
-                    return;
-                }
-                const desc = document.getElementById('desc').value;
-                const status = document.getElementById('status');
-                const frame = document.getElementById('preview-frame');
-                const container = document.getElementById('preview-container');
-                const btn = document.getElementById('generateBtn');
-                const spinner = document.getElementById('spinner');
-                if (!desc) { status.textContent = 'Введи описание!'; return; }
-                if (!currentUser.is_superuser && currentUser.generations_used >= FREE_LIMIT) {
-                    status.textContent = '🔒 Лимит исчерпан.';
-                    return;
-                }
-                isGenerating = true;
-                btn.disabled = true;
-                spinner.style.display = 'block';
-                status.textContent = '⚡ Генерирую...';
-                
-                fetch('/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        description: desc,
-                        email: currentUser.email,
-                        user_password: localStorage.getItem('siteforge_pass') || ''
-                    })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.error) {
-                        status.textContent = '❌ ' + data.error;
-                    } else {
-                        if (!currentUser.is_superuser) {
-                            currentUser.generations_used++;
-                            localStorage.setItem('siteforge_user', JSON.stringify(currentUser));
-                        }
-                        currentHtml = data.html;
-                        frame.style.display = 'block';
-                        container.style.display = 'block';
-                        frame.srcdoc = data.html;
-                        status.textContent = '✅ Готово!';
-                        updateTopBar();
+                if (!currentUser) { document.getElementById('status').textContent = '❌ Сначала войдите!'; window.location.href = '/auth'; return; }
+                const d = document.getElementById('desc').value, s = document.getElementById('status'), f = document.getElementById('preview-frame'), c = document.getElementById('preview-container'), btn = document.getElementById('generateBtn'), sp = document.getElementById('spinner');
+                if (!d) { s.textContent = 'Введи описание!'; return; }
+                if (!currentUser.is_superuser && currentUser.generations_used >= FREE_LIMIT) { s.textContent = '🔒 Лимит исчерпан.'; return; }
+                isGenerating = true; btn.disabled = true; sp.style.display = 'block'; s.textContent = '⚡ Генерирую...';
+                fetch('/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description: d, email: currentUser.email, user_password: localStorage.getItem('siteforge_pass') || '' }) })
+                .then(r => r.json()).then(data => {
+                    if (data.error) { s.textContent = '❌ ' + data.error; }
+                    else {
+                        if (!currentUser.is_superuser) { currentUser.generations_used++; localStorage.setItem('siteforge_user', JSON.stringify(currentUser)); }
+                        currentHtml = data.html; f.style.display = 'block'; c.style.display = 'block'; f.srcdoc = data.html;
+                        s.textContent = '✅ Готово!'; updateTopBar();
+                        setTimeout(() => { enableEditInFrame(); }, 500);
                     }
-                })
-                .catch(e => { status.textContent = '❌ Ошибка: ' + e.message; })
-                .finally(() => {
-                    isGenerating = false;
-                    btn.disabled = false;
-                    spinner.style.display = 'none';
-                });
+                }).catch(e => { s.textContent = '❌ Ошибка: ' + e.message; }).finally(() => { isGenerating = false; btn.disabled = false; sp.style.display = 'none'; });
             }
             
-            function saveToGallery() {
-                if (!currentHtml) { alert('Сначала создай шаблон!'); return; }
-                const title = document.getElementById('desc').value || 'Без названия';
-                gallery.unshift({ title, html: currentHtml, date: new Date().toLocaleString() });
-                if (gallery.length > 50) gallery = gallery.slice(0, 50);
-                localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
-                renderGallery();
-                alert('Сохранено!');
+            function toggleEditMode() {
+                editMode = !editMode;
+                const btn = document.getElementById('edit-mode-btn');
+                btn.textContent = editMode ? '✏️ Редактирование ВКЛ' : '✏️ Редактировать текст';
+                btn.className = editMode ? 'text-green-400 hover:underline text-xs font-bold' : 'text-purple-400 hover:underline text-xs';
+                document.getElementById('edit-hint').style.display = editMode ? 'block' : 'none';
+                enableEditInFrame();
             }
             
-            function renderGallery() {
-                const list = document.getElementById('gallery-list');
-                const visible = gallery.slice(0, galleryVisible);
-                list.innerHTML = visible.map((s, i) => `
-                    <div class="site-card" onclick="loadFromGallery(${i})">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <span class="text-sm font-medium">${s.title}</span>
-                                <span class="text-xs text-gray-500 ml-2">${s.date}</span>
-                            </div>
-                            <button onclick="event.stopPropagation(); deleteFromGallery(${i})" class="text-red-400 text-xs hover:text-red-300">Удалить</button>
-                        </div>
-                    </div>
-                `).join('');
-                if (gallery.length > 4 && galleryVisible === 4) {
-                    list.innerHTML += `<button onclick="showAll()" class="w-full text-center text-sm text-purple-400 hover:text-purple-300 py-2">Показать все (${gallery.length})</button>`;
-                }
-                if (!gallery.length) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>';
+            function enableEditInFrame() {
+                const frame = document.getElementById('preview-frame');
+                if (!frame.srcdoc || frame.srcdoc === '') return;
+                try {
+                    const doc = frame.contentDocument || frame.contentWindow.document;
+                    if (!doc) return;
+                    const texts = doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, li, a, button, td, th, div, label');
+                    texts.forEach(el => {
+                        if (el.children.length === 0 && el.textContent.trim().length > 0) {
+                            if (editMode) {
+                                el.style.cursor = 'text';
+                                el.style.outline = '1px dashed rgba(139,92,246,0.3)';
+                                el.onclick = function(e) {
+                                    e.preventDefault(); e.stopPropagation();
+                                    const old = el.textContent;
+                                    const input = doc.createElement('input');
+                                    input.value = old; input.style.width = '100%'; input.style.padding = '4px';
+                                    input.style.border = '2px solid #8b5cf6'; input.style.borderRadius = '4px';
+                                    input.style.fontSize = window.getComputedStyle(el).fontSize;
+                                    el.textContent = ''; el.appendChild(input); input.focus();
+                                    input.onblur = function() {
+                                        const newText = input.value;
+                                        el.textContent = newText;
+                                        currentHtml = currentHtml.replace(old, newText);
+                                        el.style.outline = '1px dashed rgba(139,92,246,0.3)';
+                                        el.style.cursor = 'text';
+                                    };
+                                    input.onkeydown = function(ev) { if (ev.key === 'Enter') input.blur(); };
+                                };
+                            } else {
+                                el.style.cursor = 'default';
+                                el.style.outline = 'none';
+                                el.onclick = null;
+                            }
+                        }
+                    });
+                } catch(e) {}
             }
             
+            function saveToGallery() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } const title = document.getElementById('desc').value || 'Без названия'; gallery.unshift({ title, html: currentHtml, date: new Date().toLocaleString() }); if (gallery.length > 50) gallery = gallery.slice(0, 50); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); alert('Сохранено!'); }
+            function renderGallery() { const list = document.getElementById('gallery-list'); const visible = gallery.slice(0, galleryVisible); list.innerHTML = visible.map((s, i) => `<div class="site-card" onclick="loadFromGallery(${i})"><div class="flex justify-between items-center"><div><span class="text-sm font-medium">${s.title}</span><span class="text-xs text-gray-500 ml-2">${s.date}</span></div><button onclick="event.stopPropagation(); deleteFromGallery(${i})" class="text-red-400 text-xs">Удалить</button></div></div>`).join(''); if (gallery.length > 4 && galleryVisible === 4) list.innerHTML += `<button onclick="showAll()" class="w-full text-center text-sm text-purple-400 py-2">Показать все (${gallery.length})</button>`; if (!gallery.length) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>'; }
             function showAll() { galleryVisible = gallery.length; renderGallery(); }
-            
-            function loadFromGallery(i) {
-                const s = gallery[i];
-                currentHtml = s.html;
-                document.getElementById('desc').value = s.title;
-                const f = document.getElementById('preview-frame');
-                f.srcdoc = s.html;
-                f.style.display = 'block';
-                document.getElementById('preview-container').style.display = 'block';
-            }
-            
-            function deleteFromGallery(i) {
-                if (confirm('Удалить?')) {
-                    gallery.splice(i, 1);
-                    localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
-                    renderGallery();
-                }
-            }
-            
-            function clearGallery() {
-                if (confirm('Удалить ВСЁ?')) {
-                    gallery = [];
-                    localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
-                    renderGallery();
-                }
-            }
-            
-            function toggleGallery() {
-                const s = document.getElementById('gallery-section');
-                const b = document.getElementById('gallery-toggle');
-                if (s.style.display === 'block') {
-                    s.style.display = 'none';
-                    b.textContent = '📂 Сохранённые шаблоны';
-                } else {
-                    s.style.display = 'block';
-                    b.textContent = '📂 Скрыть шаблоны';
-                    galleryVisible = 4;
-                    renderGallery();
-                }
-            }
-            
-            function toggleCopyMenu() {
-                document.getElementById('copyMenu').classList.toggle('active');
-            }
-            
-            function copyCode(mode) {
-                if (!currentHtml) { alert('Сначала создай шаблон!'); return; }
-                let text = '';
-                if (mode === 'full') text = currentHtml;
-                else if (mode === 'body') {
-                    const m = currentHtml.match(/<body[^>]*>([\\s\\S]*)<\\/body>/i);
-                    text = m ? m[1] : currentHtml;
-                } else if (mode === 'css') {
-                    const m = currentHtml.match(/<style[^>]*>([\\s\\S]*)<\\/style>/i);
-                    text = m ? m[1] : '/* Стили не найдены */';
-                }
-                navigator.clipboard.writeText(text.trim()).then(() => {
-                    alert('Скопировано!');
-                    toggleCopyMenu();
-                });
-            }
-            
-            function downloadHTML() {
-                if (!currentHtml) { alert('Сначала создай шаблон!'); return; }
-                const b = new Blob([currentHtml], {type: 'text/html'});
-                const u = URL.createObjectURL(b);
-                const a = document.createElement('a');
-                a.href = u;
-                a.download = 'шаблон.html';
-                a.click();
-                URL.revokeObjectURL(u);
-            }
-            
-            function closePreview() {
-                document.getElementById('preview-frame').style.display = 'none';
-                document.getElementById('preview-container').style.display = 'none';
-                currentHtml = '';
-                document.getElementById('copyMenu').classList.remove('active');
-            }
-            
+            function loadFromGallery(i) { const s = gallery[i]; currentHtml = s.html; document.getElementById('desc').value = s.title; const f = document.getElementById('preview-frame'); f.srcdoc = s.html; f.style.display = 'block'; document.getElementById('preview-container').style.display = 'block'; }
+            function deleteFromGallery(i) { if (confirm('Удалить?')) { gallery.splice(i, 1); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
+            function clearGallery() { if (confirm('Удалить ВСЁ?')) { gallery = []; localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
+            function toggleGallery() { const s = document.getElementById('gallery-section'), b = document.getElementById('gallery-toggle'); if (s.style.display === 'block') { s.style.display = 'none'; b.textContent = '📂 Сохранённые шаблоны'; } else { s.style.display = 'block'; b.textContent = '📂 Скрыть шаблоны'; galleryVisible = 4; renderGallery(); } }
+            function toggleCopyMenu() { document.getElementById('copyMenu').classList.toggle('active'); }
+            function copyCode(mode) { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } let t = ''; if (mode === 'full') t = currentHtml; else if (mode === 'body') { const m = currentHtml.match(/<body[^>]*>([\s\S]*)<\/body>/i); t = m ? m[1] : currentHtml; } else if (mode === 'css') { const m = currentHtml.match(/<style[^>]*>([\s\S]*)<\/style>/i); t = m ? m[1] : '/* нет */'; } navigator.clipboard.writeText(t.trim()).then(() => { alert('Скопировано!'); toggleCopyMenu(); }); }
+            function downloadHTML() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } const b = new Blob([currentHtml], {type: 'text/html'}), u = URL.createObjectURL(b), a = document.createElement('a'); a.href = u; a.download = 'шаблон.html'; a.click(); URL.revokeObjectURL(u); }
+            function closePreview() { document.getElementById('preview-frame').style.display = 'none'; document.getElementById('preview-container').style.display = 'none'; currentHtml = ''; editMode = false; document.getElementById('edit-mode-btn').textContent = '✏️ Редактировать текст'; document.getElementById('edit-hint').style.display = 'none'; }
             function openModal(t) { document.getElementById(t + '-modal').classList.add('active'); }
             function closeModal(t) { document.getElementById(t + '-modal').classList.remove('active'); }
-            window.onclick = function(e) {
-                if (e.target.classList.contains('modal')) e.target.classList.remove('active');
-                if (!e.target.closest('.copy-menu')) document.getElementById('copyMenu').classList.remove('active');
-            }
+            window.onclick = function(e) { if (e.target.classList.contains('modal')) e.target.classList.remove('active'); if (!e.target.closest('.copy-menu')) document.getElementById('copyMenu').classList.remove('active'); }
+            document.addEventListener('mousemove', function(e) { const hint = document.getElementById('edit-hint'); if (editMode) { hint.style.left = (e.clientX + 15) + 'px'; hint.style.top = (e.clientY - 30) + 'px'; } });
             renderGallery();
         </script>
     </body>
