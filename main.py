@@ -138,9 +138,8 @@ def generate_site(req: SiteRequest):
 
     html = re.sub(r'(<a\b[^>]*?)href="[^"]*"', r'\1href="#"', html)
     html = re.sub(r"(<a\b[^>]*?)href='[^']*'", r"\1href='#'", html)
-    html = re.sub(r'action="[^"]*"', 'action="#"', html)
-
-        html = html.replace('<body', '<body style="background:#f3f4f6"', 1)
+    html = re.sub(r'action="[^"]*"', 'action="#"', html) 
+    html = html.replace('<body', '<body style="background:#f3f4f6"', 1)
 
     html = html.replace('</head>', '<style>body{max-width:100vw!important;overflow-x:hidden!important}a{text-decoration:none!important;pointer-events:none;cursor:default;color:inherit}</style></head>')
 
