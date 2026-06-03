@@ -4,7 +4,7 @@ import psycopg2
 import psycopg2.extras
 import bcrypt
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -120,14 +120,10 @@ def generate_site(req: SiteRequest):
         messages=[{
             "role": "system",
             "content": (
-                "Ты генератор HTML-шаблонов. Пользователь описывает, какой шаблон нужен. "
-                "Создай КРАСИВЫЙ современный адаптивный одностраничный HTML-шаблон с Tailwind CSS (подключи через CDN). "
-                "Создавай шаблон с базовыми секциями (меню, контакты, описание), но без лишних функций (спецпредложения, команда, вакансии), если пользователь явно их не просил. "
-                "Для изображений используй заглушки placeholder.com или серый div с рамкой. "
-                "Шаблон должен быть полностью адаптивным для мобильных устройств. "
-                "Все ссылки и кнопки должны быть НЕАКТИВНЫМИ заглушками. "
-                "Используй красивые градиенты, тени, анимации при наведении. "
-                "Отвечай ТОЛЬКО HTML-кодом в ```html ... ```. Без пояснений."
+                "Ты генератор HTML-шаблонов. Создай КРАСИВЫЙ адаптивный HTML-шаблон с Tailwind CSS (CDN). "
+                "Базовые секции (меню, контакты, описание), без лишних функций. "
+                "Изображения — placeholder.com или серый div. Все ссылки неактивны. "
+                "Используй красивые градиенты, тени, анимации. Отвечай ТОЛЬКО HTML в ```html ...```."
             )
         }, {
             "role": "user",
@@ -159,142 +155,78 @@ def generate_site(req: SiteRequest):
 def view_site():
     return last_site["html"]
 
+HEADER = """
+<div class="flex justify-between items-center mb-6">
+    <a href="/" class="text-gray-400 hover:text-white transition text-sm">← Назад</a>
+    <div class="flex items-center gap-3" id="top-bar"></div>
+</div>
+"""
+
 @app.get("/", response_class=HTMLResponse)
 def home():
-    return """
+    return f"""
     <!DOCTYPE html>
     <html lang="ru">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <title>SiteForge — Генератор HTML-шаблонов</title>
+        <title>SiteForge — Генератор</title>
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
-            #preview-frame { width: 100%; height: 70vh; border: none; border-radius: 12px; display: none; background: transparent; }
-            #preview-container { display: none; margin-top: 20px; animation: fadeIn 0.3s ease; }
-            @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-            @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-            .spinner { animation: spin 1s linear infinite; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #8b5cf6; border-radius: 50%; display: none; margin: 10px auto; }
-            .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; text-align: center; }
-            .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99,102,241,0.4); }
-            .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-            .btn-login { background: #3b82f6; color: white; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; }
-            .btn-login:hover { background: #2563eb; }
-            .nav-btn { flex: 1; padding: 10px; border-radius: 10px 10px 0 0; cursor: pointer; border: none; font-size: 14px; font-weight: bold; transition: all 0.2s; }
-            .nav-btn.active { background: #8b5cf6; color: white; }
-            .nav-btn.inactive { background: #1e1b4b; color: #888; }
-            .input-field { width: 100%; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 14px; outline: none; margin-bottom: 12px; }
-            .input-field:focus { border-color: #8b5cf6; }
-            .site-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px; margin-bottom: 8px; cursor: pointer; }
-            .site-card:hover { background: rgba(255,255,255,0.1); }
-            .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; }
-            .modal.active { display: flex; }
-            .modal-content { background: #0f0d2e; border-radius: 16px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); color: #d1d5db; }
-            .package-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px; text-align: center; cursor: default; transition: all 0.2s; }
-            .package-card:hover { border-color: #8b5cf6; background: rgba(139,92,246,0.1); }
-            .package-card.popular { border-color: #f59e0b; }
-            .package-card h3 { font-size: 18px; font-weight: bold; }
-            .package-card .price { font-size: 28px; font-weight: bold; margin: 8px 0; }
-            .package-card .btn-buy { background: #8b5cf6; color: white; padding: 8px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; border: none; transition: all 0.2s; }
-            .package-card .btn-buy:hover { background: #7c3aed; }
+            #preview-frame {{ width: 100%; height: 70vh; border: none; border-radius: 12px; display: none; background: transparent; }}
+            #preview-container {{ display: none; margin-top: 20px; animation: fadeIn 0.3s ease; }}
+            @keyframes fadeIn {{ from {{ opacity: 0; transform: translateY(10px); }} to {{ opacity: 1; transform: translateY(0); }} }}
+            @keyframes spin {{ from {{ transform: rotate(0deg); }} to {{ transform: rotate(360deg); }} }}
+            .spinner {{ animation: spin 1s linear infinite; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #8b5cf6; border-radius: 50%; display: none; margin: 10px auto; }}
+            .btn-primary {{ background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 14px; border-radius: 14px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; text-align: center; }}
+            .btn-primary:hover:not(:disabled) {{ transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99,102,241,0.4); }}
+            .btn-primary:disabled {{ opacity: 0.5; cursor: not-allowed; }}
+            .input-field {{ width: 100%; padding: 14px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 15px; outline: none; margin-bottom: 16px; }}
+            .input-field:focus {{ border-color: #8b5cf6; box-shadow: 0 0 0 2px rgba(139,92,246,0.3); }}
+            .site-card {{ background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 14px; margin-bottom: 8px; cursor: pointer; }}
+            .site-card:hover {{ background: rgba(255,255,255,0.06); }}
+            .avatar {{ width: 32px; height: 32px; border-radius: 50%; background: #8b5cf6; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; cursor: pointer; transition: all 0.2s; }}
+            .avatar:hover {{ transform: scale(1.1); }}
+            .top-avatar-wrapper {{ display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 4px 10px 4px 4px; }}
+            .top-email {{ font-size: 12px; color: #9ca3af; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
         </style>
     </head>
     <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
-        <div class="max-w-2xl w-full px-4 mx-auto py-6 relative">
-            <!-- Top bar -->
-            <div class="flex justify-between items-center mb-4">
+        <div class="max-w-2xl w-full px-4 mx-auto py-6">
+            <div class="flex justify-between items-center mb-6">
                 <div class="flex gap-2">
-                    <button onclick="openModal('help')" class="text-gray-500 hover:text-gray-300 text-xs transition">Помощь</button>
-                    <button onclick="openModal('about')" class="text-gray-500 hover:text-gray-300 text-xs transition">О нас</button>
+                    <a href="/" class="text-xs text-gray-500 hover:text-gray-300 transition">Генератор</a>
+                    <a href="/profile" class="text-xs text-gray-500 hover:text-gray-300 transition">Профиль</a>
+                    <a href="/auth" class="text-xs text-gray-500 hover:text-gray-300 transition">Вход</a>
                 </div>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2" id="top-bar">
                     <span id="balance-display" class="text-xs text-gray-400"></span>
-                    <button id="top-auth-btn" class="btn-login" onclick="switchTab('auth')">Войти</button>
-                    <div id="avatar" style="display:none;" class="w-7 h-7 rounded-full bg-purple-600 flex items-center justify-center text-xs font-bold cursor-pointer" onclick="switchTab('profile')"></div>
-                </div>
-            </div>
-            
-            <div class="text-center mb-6">
-                <div class="text-5xl mb-2">🚀</div>
-                <h1 class="text-3xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">SiteForge</h1>
-                <p class="text-gray-400 mt-1 text-sm">Генератор HTML-шаблонов с помощью ИИ</p>
-            </div>
-            
-            <!-- Navigation -->
-            <div class="flex mb-0">
-                <button class="nav-btn active" id="nav-generate" onclick="switchTab('generate')">✨ Генерация</button>
-                <button class="nav-btn inactive" id="nav-profile" onclick="switchTab('profile')">👤 Профиль</button>
-                <button class="nav-btn inactive" id="nav-auth" onclick="switchTab('auth')">🔐 Вход</button>
-            </div>
-            
-            <div class="bg-white/5 backdrop-blur-lg rounded-b-2xl rounded-tr-2xl p-5 border border-white/10 shadow-2xl">
-                <!-- Generate Panel -->
-                <div id="panel-generate">
-                    <input id="desc" type="text" placeholder="💡 Опиши шаблон, например: лендинг для кофейни" class="input-field" maxlength="500">
-                    <button id="generateBtn" onclick="generate()" class="w-full p-4 btn-primary text-lg">✨ Создать шаблон</button>
-                    <div class="spinner" id="spinner"></div>
-                    <p id="status" class="mt-3 text-gray-400 text-xs text-center"></p>
-                </div>
-                
-                <!-- Auth Panel -->
-                <div id="panel-auth" style="display:none;">
-                    <div id="auth-form-login">
-                        <h3 class="text-sm font-bold mb-3">Вход</h3>
-                        <input id="login-email" type="email" placeholder="Email" class="input-field">
-                        <input id="login-password" type="password" placeholder="Пароль" class="input-field">
-                        <button onclick="login()" class="w-full p-3 btn-primary text-sm mb-2">Войти</button>
-                        <p class="text-xs text-gray-400 text-center mt-3">Нет аккаунта? <a href="#" onclick="showRegister(); return false;" class="text-white font-bold hover:underline">Зарегистрироваться</a></p>
-                    </div>
-                    <div id="auth-form-register" style="display:none;">
-                        <h3 class="text-sm font-bold mb-3">Регистрация</h3>
-                        <input id="reg-email" type="email" placeholder="Email" class="input-field">
-                        <input id="reg-password" type="password" placeholder="Пароль" class="input-field">
-                        <input id="reg-password2" type="password" placeholder="Подтвердите пароль" class="input-field">
-                        <button onclick="register()" class="w-full p-3 btn-primary text-sm font-bold">Зарегистрироваться</button>
-                        <p class="text-xs text-gray-400 text-center mt-3">Уже есть аккаунт? <a href="#" onclick="showLogin(); return false;" class="text-white font-bold hover:underline">Войти</a></p>
-                    </div>
-                    <p id="auth-status" class="mt-3 text-xs text-center text-gray-400"></p>
-                </div>
-                
-                <!-- Profile Panel -->
-                <div id="panel-profile" style="display:none;">
-                    <div id="profile-logged-in" style="display:none;">
-                        <h2 class="text-xl font-bold mb-2 text-center" id="profile-name"></h2>
-                        <p class="text-center text-2xl font-bold mb-1" id="profile-balance"></p>
-                        <div class="w-16 mx-auto mb-4 border-b-2 border-purple-500"></div>
-                        <p class="text-center text-gray-400 text-sm mb-6">Пакеты генераций</p>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div class="package-card">
-                                <h3>10 ген.</h3>
-                                <div class="price">150₽</div>
-                                <button class="btn-buy" disabled>Купить</button>
-                            </div>
-                            <div class="package-card">
-                                <h3>25 ген.</h3>
-                                <div class="price">300₽</div>
-                                <button class="btn-buy" disabled>Купить</button>
-                            </div>
-                            <div class="package-card popular">
-                                <h3>50 ген.</h3>
-                                <div class="price">600₽</div>
-                                <button class="btn-buy" disabled>Купить</button>
-                            </div>
-                            <div class="package-card">
-                                <h3>100 ген.</h3>
-                                <div class="price">1000₽</div>
-                                <button class="btn-buy" disabled>Купить</button>
-                            </div>
+                    <a href="/auth" id="top-auth-link" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition font-medium">Войти</a>
+                    <a href="/profile" id="top-avatar-link" style="display:none;">
+                        <div class="top-avatar-wrapper">
+                            <div class="avatar" id="avatar-icon"></div>
+                            <span class="top-email" id="avatar-email"></span>
                         </div>
-                    </div>
-                    <div id="profile-logged-out">
-                        <p class="text-center text-gray-400 text-sm">Войдите, чтобы увидеть профиль.</p>
-                    </div>
+                    </a>
                 </div>
+            </div>
+            
+            <div class="text-center mb-8">
+                <div class="text-5xl mb-2">🚀</div>
+                <h1 class="text-4xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">SiteForge</h1>
+                <p class="text-gray-400 mt-2 text-sm">Создай HTML-шаблон за секунды</p>
+            </div>
+            
+            <div class="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 shadow-2xl">
+                <input id="desc" type="text" placeholder="💡 Опиши шаблон, например: лендинг для кофейни" class="input-field" maxlength="500">
+                <button id="generateBtn" onclick="generate()" class="w-full p-4 btn-primary text-lg">✨ Создать шаблон</button>
+                <div class="spinner" id="spinner"></div>
+                <p id="status" class="mt-4 text-gray-400 text-xs text-center"></p>
             </div>
             
             <div id="preview-container">
-                <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
+                <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
                     <span class="text-sm text-gray-300">Предпросмотр</span>
                     <div class="flex gap-1 flex-wrap">
                         <button onclick="saveToGallery()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">💾</button>
@@ -311,11 +243,7 @@ def home():
                 <div id="gallery-list"></div>
             </div>
             <div class="text-center mt-4"><button onclick="toggleGallery()" class="text-sm text-gray-400 hover:text-white transition" id="gallery-toggle">📂 Сохранённые шаблоны</button></div>
-            <div class="text-center mt-6 pb-6"><p class="text-xs text-gray-500">📱 Скоро в Google Play — SiteForge</p></div>
         </div>
-
-        <div id="help-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">Как пользоваться</h2><button onclick="closeModal('help')" class="text-gray-500 hover:text-red-400 text-xl leading-none transition">✕</button></div><div class="text-sm space-y-2"><p><strong>1.</strong> Зарегистрируйся или войди.</p><p><strong>2.</strong> Опиши шаблон.</p><p><strong>3.</strong> Нажми «Создать шаблон».</p><p><strong>4.</strong> Сохрани, скачай или скопируй HTML-код.</p></div></div></div>
-        <div id="about-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">О нас</h2><button onclick="closeModal('about')" class="text-gray-500 hover:text-red-400 text-xl leading-none transition">✕</button></div><div class="text-sm space-y-2"><p><strong>SiteForge</strong> — генератор HTML-шаблонов с помощью ИИ.</p><p>Создаём красивые адаптивные заготовки за секунды.</p><p class="text-gray-400 mt-3">Версия: 1.0</p><p class="text-gray-400">Сделано с ❤️</p></div></div></div>
         
         <script>
             let currentHtml = '';
@@ -325,46 +253,178 @@ def home():
             let galleryVisible = 4;
             const FREE_LIMIT = 3;
             
-            function updateUI() {
+            function updateTopBar() {{
                 const balance = document.getElementById('balance-display');
-                const authBtn = document.getElementById('top-auth-btn');
-                const avatar = document.getElementById('avatar');
-                if (currentUser) {
+                const authLink = document.getElementById('top-auth-link');
+                const avatarLink = document.getElementById('top-avatar-link');
+                const avatarIcon = document.getElementById('avatar-icon');
+                const avatarEmail = document.getElementById('avatar-email');
+                if (currentUser) {{
                     const left = currentUser.is_superuser ? '∞' : Math.max(0, FREE_LIMIT - currentUser.generations_used);
-                    balance.textContent = `Баланс: ${left}`;
-                    authBtn.style.display = 'none';
-                    avatar.style.display = 'flex';
-                    avatar.textContent = currentUser.email.charAt(0).toUpperCase();
-                    document.getElementById('profile-logged-in').style.display = 'block';
-                    document.getElementById('profile-logged-out').style.display = 'none';
-                    document.getElementById('profile-name').textContent = currentUser.email;
-                    document.getElementById('profile-balance').textContent = `Баланс: ${left} ген.`;
-                    document.getElementById('nav-profile').style.display = 'block';
-                } else {
+                    balance.textContent = 'Баланс: ' + left + ' ген.';
+                    authLink.style.display = 'none';
+                    avatarLink.style.display = 'block';
+                    avatarIcon.textContent = currentUser.email.charAt(0).toUpperCase();
+                    avatarEmail.textContent = currentUser.email.split('@')[0];
+                }} else {{
                     balance.textContent = '';
-                    authBtn.style.display = 'block';
-                    avatar.style.display = 'none';
-                    document.getElementById('profile-logged-in').style.display = 'none';
-                    document.getElementById('profile-logged-out').style.display = 'block';
-                    document.getElementById('nav-profile').style.display = 'none';
-                }
-            }
-            updateUI();
+                    authLink.style.display = 'block';
+                    avatarLink.style.display = 'none';
+                }}
+            }}
+            updateTopBar();
             
-            function switchTab(tab) {
-                document.getElementById('panel-generate').style.display = tab === 'generate' ? 'block' : 'none';
-                document.getElementById('panel-auth').style.display = tab === 'auth' ? 'block' : 'none';
-                document.getElementById('panel-profile').style.display = tab === 'profile' ? 'block' : 'none';
-                document.getElementById('nav-generate').className = tab === 'generate' ? 'nav-btn active' : 'nav-btn inactive';
-                document.getElementById('nav-auth').className = tab === 'auth' ? 'nav-btn active' : 'nav-btn inactive';
-                document.getElementById('nav-profile').className = tab === 'profile' ? 'nav-btn active' : 'nav-btn inactive';
-                if (tab === 'auth') showLogin();
-                if (tab === 'profile') updateUI();
-            }
+            function generate() {{
+                if (isGenerating) return;
+                if (!currentUser) {{ document.getElementById('status').textContent = '❌ Сначала войдите!'; window.location.href='/auth'; return; }}
+                const desc = document.getElementById('desc').value;
+                const status = document.getElementById('status');
+                const frame = document.getElementById('preview-frame');
+                const container = document.getElementById('preview-container');
+                const btn = document.getElementById('generateBtn');
+                const spinner = document.getElementById('spinner');
+                if (!desc) {{ status.textContent = 'Введи описание!'; return; }}
+                if (!currentUser.is_superuser && currentUser.generations_used >= FREE_LIMIT) {{ status.textContent = '🔒 Лимит исчерпан.'; return; }}
+                isGenerating = true; btn.disabled = true; spinner.style.display = 'block'; status.textContent = '⚡ Генерирую...';
+                fetch('/generate', {{ method: 'POST', headers: {{ 'Content-Type': 'application/json' }}, body: JSON.stringify({{ description: desc, email: currentUser.email, user_password: localStorage.getItem('siteforge_pass') || '' }}) }})
+                .then(res => res.json())
+                .then(data => {{
+                    if (data.error) {{ status.textContent = '❌ ' + data.error; }}
+                    else {{
+                        if (!currentUser.is_superuser) {{ currentUser.generations_used++; localStorage.setItem('siteforge_user', JSON.stringify(currentUser)); }}
+                        currentHtml = data.html; frame.style.display = 'block'; container.style.display = 'block'; frame.srcdoc = data.html;
+                        status.textContent = '✅ Готово!'; updateTopBar();
+                    }}
+                }})
+                .catch(e => {{ status.textContent = '❌ Ошибка: ' + e.message; }})
+                .finally(() => {{ isGenerating = false; btn.disabled = false; spinner.style.display = 'none'; }});
+            }}
             
+            function saveToGallery() {{ if (!currentHtml) {{ alert('Сначала создай шаблон!'); return; }} const title = document.getElementById('desc').value || 'Без названия'; gallery.unshift({{ title, html: currentHtml, date: new Date().toLocaleString() }}); if (gallery.length > 50) gallery = gallery.slice(0, 50); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); alert('Сохранено!'); }}
+            function renderGallery() {{ const list = document.getElementById('gallery-list'); const visible = gallery.slice(0, galleryVisible); list.innerHTML = visible.map((s, i) => `<div class="site-card" onclick="loadFromGallery(${{i}})"><div class="flex justify-between items-center"><div><span class="text-sm font-medium">${{s.title}}</span><span class="text-xs text-gray-500 ml-2">${{s.date}}</span></div><button onclick="event.stopPropagation(); deleteFromGallery(${{i}})" class="text-red-400 text-xs hover:text-red-300">Удалить</button></div></div>`).join(''); if (gallery.length > 4 && galleryVisible === 4) list.innerHTML += `<button onclick="showAll()" class="w-full text-center text-sm text-purple-400 hover:text-purple-300 py-2">Показать все (${{gallery.length}})</button>`; if (!gallery.length) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>'; }}
+            function showAll() {{ galleryVisible = gallery.length; renderGallery(); }}
+            function loadFromGallery(i) {{ const s = gallery[i]; currentHtml = s.html; document.getElementById('desc').value = s.title; const f = document.getElementById('preview-frame'); f.srcdoc = s.html; f.style.display = 'block'; document.getElementById('preview-container').style.display = 'block'; }}
+            function deleteFromGallery(i) {{ if (confirm('Удалить?')) {{ gallery.splice(i, 1); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); }} }}
+            function clearGallery() {{ if (confirm('Удалить ВСЁ?')) {{ gallery = []; localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); }} }}
+            function toggleGallery() {{ const s = document.getElementById('gallery-section'), b = document.getElementById('gallery-toggle'); if (s.style.display === 'block') {{ s.style.display = 'none'; b.textContent = '📂 Сохранённые шаблоны'; }} else {{ s.style.display = 'block'; b.textContent = '📂 Скрыть шаблоны'; galleryVisible = 4; renderGallery(); }} }}
+            function copyCode() {{ if (!currentHtml) {{ alert('Сначала создай шаблон!'); return; }} navigator.clipboard.writeText(currentHtml).then(() => alert('Скопировано!')); }}
+            function downloadHTML() {{ if (!currentHtml) {{ alert('Сначала создай шаблон!'); return; }} const b = new Blob([currentHtml], {{type: 'text/html'}}); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = 'шаблон.html'; a.click(); URL.revokeObjectURL(u); }}
+            function closePreview() {{ document.getElementById('preview-frame').style.display = 'none'; document.getElementById('preview-container').style.display = 'none'; currentHtml = ''; }}
+            renderGallery();
+        </script>
+    </body>
+    </html>
+    """
+
+@app.get("/profile", response_class=HTMLResponse)
+def profile_page():
+    return """
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+        <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SiteForge — Профиль</title>
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            .package-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 24px; text-align: center; transition: all 0.2s; }
+            .package-card:hover { border-color: #8b5cf6; background: rgba(139,92,246,0.08); }
+            .package-card.popular { border-color: #f59e0b; background: rgba(245,158,11,0.05); }
+            .btn-buy { background: #8b5cf6; color: white; padding: 10px 24px; border-radius: 10px; font-size: 14px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; opacity: 0.5; }
+            .btn-buy:hover { background: #7c3aed; }
+            .avatar-large { width: 64px; height: 64px; border-radius: 50%; background: #8b5cf6; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; margin: 0 auto; }
+        </style>
+    </head>
+    <body class="bg-gray-950 text-white min-h-screen">
+        <div class="max-w-2xl w-full px-4 mx-auto py-6">
+            <div class="flex justify-between items-center mb-6">
+                <a href="/" class="text-gray-400 hover:text-white transition text-sm">← Назад к генератору</a>
+                <div class="flex gap-2">
+                    <a href="/" class="text-xs text-gray-500 hover:text-gray-300">Генератор</a>
+                    <a href="/auth" class="text-xs text-gray-500 hover:text-gray-300">Вход</a>
+                </div>
+            </div>
+            
+            <div id="profile-content" class="bg-gray-900 rounded-2xl p-8 border border-gray-800">
+                <div id="profile-logged-out">
+                    <p class="text-center text-gray-400">Войдите, чтобы увидеть профиль.</p>
+                    <div class="text-center mt-4"><a href="/auth" class="text-purple-400 hover:underline text-sm">Войти</a></div>
+                </div>
+                <div id="profile-logged-in" style="display:none;">
+                    <div class="avatar-large mb-4" id="profile-avatar"></div>
+                    <h2 class="text-xl font-bold text-center mb-1" id="profile-email"></h2>
+                    <p class="text-center text-3xl font-bold mb-2" id="profile-balance"></p>
+                    <div class="w-16 mx-auto border-b-2 border-purple-500 mb-6"></div>
+                    <p class="text-center text-gray-400 text-sm mb-6">Пакеты генераций</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="package-card"><h3 class="text-lg font-bold">10 ген.</h3><p class="text-2xl font-bold my-2">150₽</p><button class="btn-buy" disabled>Скоро</button></div>
+                        <div class="package-card"><h3 class="text-lg font-bold">25 ген.</h3><p class="text-2xl font-bold my-2">300₽</p><button class="btn-buy" disabled>Скоро</button></div>
+                        <div class="package-card popular"><h3 class="text-lg font-bold">50 ген.</h3><p class="text-2xl font-bold my-2">600₽</p><button class="btn-buy" disabled>Скоро</button></div>
+                        <div class="package-card"><h3 class="text-lg font-bold">100 ген.</h3><p class="text-2xl font-bold my-2">1000₽</p><button class="btn-buy" disabled>Скоро</button></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            const user = JSON.parse(localStorage.getItem('siteforge_user') || 'null');
+            if (user) {
+                document.getElementById('profile-logged-out').style.display = 'none';
+                document.getElementById('profile-logged-in').style.display = 'block';
+                document.getElementById('profile-avatar').textContent = user.email.charAt(0).toUpperCase();
+                document.getElementById('profile-email').textContent = user.email;
+                const left = user.is_superuser ? '∞' : Math.max(0, 3 - user.generations_used);
+                document.getElementById('profile-balance').textContent = left + ' ген.';
+            }
+        </script>
+    </body>
+    </html>
+    """
+
+@app.get("/auth", response_class=HTMLResponse)
+def auth_page():
+    return """
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+        <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SiteForge — Вход</title>
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            .input-field { width: 100%; padding: 14px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 15px; outline: none; margin-bottom: 16px; }
+            .input-field:focus { border-color: #8b5cf6; }
+            .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 14px; border-radius: 14px; font-weight: bold; cursor: pointer; border: none; width: 100%; }
+            .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99,102,241,0.4); }
+        </style>
+    </head>
+    <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
+        <div class="max-w-md w-full px-4 mx-auto py-12">
+            <div class="flex justify-between items-center mb-6">
+                <a href="/" class="text-gray-400 hover:text-white transition text-sm">← Назад</a>
+            </div>
+            <div class="text-center mb-8"><div class="text-5xl mb-2">🚀</div><h1 class="text-2xl font-bold">Вход / Регистрация</h1></div>
+            <div class="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10">
+                <div id="auth-form-login">
+                    <h3 class="text-sm font-bold mb-4">Вход</h3>
+                    <input id="login-email" type="email" placeholder="Email" class="input-field">
+                    <input id="login-password" type="password" placeholder="Пароль" class="input-field">
+                    <button onclick="login()" class="btn-primary mb-3">Войти</button>
+                    <p class="text-xs text-gray-400 text-center">Нет аккаунта? <a href="#" onclick="showRegister(); return false;" class="text-white font-bold hover:underline">Зарегистрироваться</a></p>
+                </div>
+                <div id="auth-form-register" style="display:none;">
+                    <h3 class="text-sm font-bold mb-4">Регистрация</h3>
+                    <input id="reg-email" type="email" placeholder="Email" class="input-field">
+                    <input id="reg-password" type="password" placeholder="Пароль" class="input-field">
+                    <input id="reg-password2" type="password" placeholder="Подтвердите пароль" class="input-field">
+                    <button onclick="register()" class="btn-primary mb-3">Зарегистрироваться</button>
+                    <p class="text-xs text-gray-400 text-center">Уже есть аккаунт? <a href="#" onclick="showLogin(); return false;" class="text-white font-bold hover:underline">Войти</a></p>
+                </div>
+                <p id="auth-status" class="mt-3 text-xs text-center text-gray-400"></p>
+            </div>
+        </div>
+        <script>
             function showLogin() { document.getElementById('auth-form-login').style.display = 'block'; document.getElementById('auth-form-register').style.display = 'none'; document.getElementById('auth-status').textContent = ''; }
             function showRegister() { document.getElementById('auth-form-login').style.display = 'none'; document.getElementById('auth-form-register').style.display = 'block'; document.getElementById('auth-status').textContent = ''; }
-            
             async function login() {
                 const email = document.getElementById('login-email').value;
                 const password = document.getElementById('login-password').value;
@@ -375,16 +435,13 @@ def home():
                     if (!res.ok) { const err = await res.json(); status.textContent = '❌ ' + err.detail; }
                     else {
                         const user = await res.json();
-                        currentUser = user;
                         localStorage.setItem('siteforge_user', JSON.stringify(user));
                         localStorage.setItem('siteforge_pass', password);
                         status.textContent = '✅ Вход выполнен!';
-                        updateUI();
-                        setTimeout(() => switchTab('generate'), 1000);
+                        setTimeout(() => { window.location.href = '/'; }, 1000);
                     }
                 } catch(e) { status.textContent = '❌ Ошибка: ' + e.message; }
             }
-            
             async function register() {
                 const email = document.getElementById('reg-email').value;
                 const password = document.getElementById('reg-password').value;
@@ -399,47 +456,6 @@ def home():
                     else { status.textContent = '✅ Регистрация успешна! Теперь войди.'; showLogin(); document.getElementById('login-email').value = email; }
                 } catch(e) { status.textContent = '❌ Ошибка: ' + e.message; }
             }
-            
-            function generate() {
-                if (isGenerating) return;
-                if (!currentUser) { document.getElementById('status').textContent = '❌ Сначала войдите!'; switchTab('auth'); return; }
-                const desc = document.getElementById('desc').value;
-                const status = document.getElementById('status');
-                const frame = document.getElementById('preview-frame');
-                const container = document.getElementById('preview-container');
-                const btn = document.getElementById('generateBtn');
-                const spinner = document.getElementById('spinner');
-                if (!desc) { status.textContent = 'Введи описание!'; return; }
-                if (!currentUser.is_superuser && currentUser.generations_used >= FREE_LIMIT) { status.textContent = '🔒 Лимит исчерпан.'; return; }
-                isGenerating = true; btn.disabled = true; spinner.style.display = 'block'; status.textContent = '⚡ Генерирую...';
-                fetch('/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description: desc, email: currentUser.email, user_password: localStorage.getItem('siteforge_pass') || '' }) })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.error) { status.textContent = '❌ ' + data.error; }
-                    else {
-                        if (!currentUser.is_superuser) { currentUser.generations_used++; localStorage.setItem('siteforge_user', JSON.stringify(currentUser)); }
-                        currentHtml = data.html; frame.style.display = 'block'; container.style.display = 'block'; frame.srcdoc = data.html;
-                        status.textContent = '✅ Готово!'; updateUI();
-                    }
-                })
-                .catch(e => { status.textContent = '❌ Ошибка: ' + e.message; })
-                .finally(() => { isGenerating = false; btn.disabled = false; spinner.style.display = 'none'; });
-            }
-            
-            function saveToGallery() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } const title = document.getElementById('desc').value || 'Без названия'; gallery.unshift({ title, html: currentHtml, date: new Date().toLocaleString() }); if (gallery.length > 50) gallery = gallery.slice(0, 50); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); alert('Сохранено!'); }
-            function renderGallery() { const list = document.getElementById('gallery-list'); const visible = gallery.slice(0, galleryVisible); list.innerHTML = visible.map((s, i) => `<div class="site-card" onclick="loadFromGallery(${i})"><div class="flex justify-between items-center"><div><span class="text-sm font-medium">${s.title}</span><span class="text-xs text-gray-500 ml-2">${s.date}</span></div><button onclick="event.stopPropagation(); deleteFromGallery(${i})" class="text-red-400 text-xs hover:text-red-300">Удалить</button></div></div>`).join(''); if (gallery.length > 4 && galleryVisible === 4) list.innerHTML += `<button onclick="showAll()" class="w-full text-center text-sm text-purple-400 hover:text-purple-300 py-2">Показать все (${gallery.length})</button>`; if (!gallery.length) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>'; }
-            function showAll() { galleryVisible = gallery.length; renderGallery(); }
-            function loadFromGallery(i) { const s = gallery[i]; currentHtml = s.html; document.getElementById('desc').value = s.title; const f = document.getElementById('preview-frame'); f.srcdoc = s.html; f.style.display = 'block'; document.getElementById('preview-container').style.display = 'block'; }
-            function deleteFromGallery(i) { if (confirm('Удалить?')) { gallery.splice(i, 1); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
-            function clearGallery() { if (confirm('Удалить ВСЁ?')) { gallery = []; localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
-            function toggleGallery() { const s = document.getElementById('gallery-section'), b = document.getElementById('gallery-toggle'); if (s.style.display === 'block') { s.style.display = 'none'; b.textContent = '📂 Сохранённые шаблоны'; } else { s.style.display = 'block'; b.textContent = '📂 Скрыть шаблоны'; galleryVisible = 4; renderGallery(); } }
-            function copyCode() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } navigator.clipboard.writeText(currentHtml).then(() => alert('Скопировано!')); }
-            function downloadHTML() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } const b = new Blob([currentHtml], {type: 'text/html'}); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = 'шаблон.html'; a.click(); URL.revokeObjectURL(u); }
-            function closePreview() { document.getElementById('preview-frame').style.display = 'none'; document.getElementById('preview-container').style.display = 'none'; currentHtml = ''; }
-            function openModal(t) { document.getElementById(t + '-modal').classList.add('active'); }
-            function closeModal(t) { document.getElementById(t + '-modal').classList.remove('active'); }
-            window.onclick = function(e) { if (e.target.classList.contains('modal')) e.target.classList.remove('active'); }
-            renderGallery();
         </script>
     </body>
     </html>
