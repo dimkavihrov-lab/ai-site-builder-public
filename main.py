@@ -303,7 +303,7 @@ def profile_page():
         <div class="package-card"><h3 class="text-lg font-bold">25 ген.</h3><p class="text-2xl font-bold my-2">300₽</p><button class="btn-buy" disabled>Скоро</button></div>
         <div class="package-card popular"><h3 class="text-lg font-bold">50 ген.</h3><p class="text-2xl font-bold my-2">600₽</p><button class="btn-buy" disabled>Скоро</button></div>
         <div class="package-card"><h3 class="text-lg font-bold">100 ген.</h3><p class="text-2xl font-bold my-2">1000₽</p><button class="btn-buy" disabled>Скоро</button></div></div>
-        <div class="text-center mt-6"><button onclick="logout()" class="text-red-400 hover:text-red-300 text-sm">Выйти из аккаунта</button></div></div></div></div>
+        <div class="text-right mt-6"><button onclick="logout()" class="text-red-400 hover:text-red-300 text-sm">Выйти из аккаунта</button></div></div></div></div>
         <script>const u=JSON.parse(localStorage.getItem('siteforge_user')||'null');if(u){document.getElementById('plo').style.display='none';document.getElementById('pli').style.display='block';document.getElementById('pa').textContent=u.email.charAt(0).toUpperCase();document.getElementById('pe').textContent=u.email;document.getElementById('pb').textContent=(u.is_superuser?'∞':Math.max(0,3-u.generations_used))+' ген.'}function logout(){localStorage.removeItem('siteforge_user');localStorage.removeItem('siteforge_pass');window.location.href='/'}</script></body></html>"""
 
 @app.get("/auth", response_class=HTMLResponse)
