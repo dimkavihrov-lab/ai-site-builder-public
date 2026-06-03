@@ -171,7 +171,7 @@ def home():
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
-            #preview-frame { width: 100%; height: 70vh; border: none; border-radius: 12px; display: none; background: white; }
+            #preview-frame { width: 100%; height: 70vh; border: none; border-radius: 12px; display: none; background: transparent; }
             #preview-container { display: none; margin-top: 20px; animation: fadeIn 0.3s ease; }
             @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
             @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -179,6 +179,8 @@ def home():
             .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; text-align: center; }
             .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99,102,241,0.4); }
             .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+            .btn-login { background: #3b82f6; color: white; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; }
+            .btn-login:hover { background: #2563eb; }
             .nav-btn { flex: 1; padding: 10px; border-radius: 10px 10px 0 0; cursor: pointer; border: none; font-size: 14px; font-weight: bold; transition: all 0.2s; }
             .nav-btn.active { background: #8b5cf6; color: white; }
             .nav-btn.inactive { background: #1e1b4b; color: #888; }
@@ -189,19 +191,27 @@ def home():
             .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; }
             .modal.active { display: flex; }
             .modal-content { background: #0f0d2e; border-radius: 16px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); color: #d1d5db; }
+            .package-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px; text-align: center; cursor: default; transition: all 0.2s; }
+            .package-card:hover { border-color: #8b5cf6; background: rgba(139,92,246,0.1); }
+            .package-card.popular { border-color: #f59e0b; }
+            .package-card h3 { font-size: 18px; font-weight: bold; }
+            .package-card .price { font-size: 28px; font-weight: bold; margin: 8px 0; }
+            .package-card .btn-buy { background: #8b5cf6; color: white; padding: 8px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; border: none; transition: all 0.2s; }
+            .package-card .btn-buy:hover { background: #7c3aed; }
         </style>
     </head>
     <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
         <div class="max-w-2xl w-full px-4 mx-auto py-6 relative">
-            <!-- Top bar: left=help+about, right=auth+balance -->
+            <!-- Top bar -->
             <div class="flex justify-between items-center mb-4">
                 <div class="flex gap-2">
                     <button onclick="openModal('help')" class="text-gray-500 hover:text-gray-300 text-xs transition">Помощь</button>
                     <button onclick="openModal('about')" class="text-gray-500 hover:text-gray-300 text-xs transition">О нас</button>
                 </div>
-                <div class="flex gap-3 items-center">
+                <div class="flex items-center gap-3">
                     <span id="balance-display" class="text-xs text-gray-400"></span>
-                    <button id="top-auth-btn" onclick="switchTab('auth')" class="text-purple-400 hover:text-purple-300 text-xs transition">Вход</button>
+                    <button id="top-auth-btn" class="btn-login" onclick="switchTab('auth')">Войти</button>
+                    <div id="avatar" style="display:none;" class="w-7 h-7 rounded-full bg-purple-600 flex items-center justify-center text-xs font-bold cursor-pointer" onclick="switchTab('profile')"></div>
                 </div>
             </div>
             
@@ -210,17 +220,24 @@ def home():
                 <h1 class="text-3xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">SiteForge</h1>
                 <p class="text-gray-400 mt-1 text-sm">Генератор HTML-шаблонов с помощью ИИ</p>
             </div>
+            
+            <!-- Navigation -->
             <div class="flex mb-0">
                 <button class="nav-btn active" id="nav-generate" onclick="switchTab('generate')">✨ Генерация</button>
-                <button class="nav-btn inactive" id="nav-auth" onclick="switchTab('auth')">👤 Вход / Регистрация</button>
+                <button class="nav-btn inactive" id="nav-profile" onclick="switchTab('profile')">👤 Профиль</button>
+                <button class="nav-btn inactive" id="nav-auth" onclick="switchTab('auth')">🔐 Вход</button>
             </div>
+            
             <div class="bg-white/5 backdrop-blur-lg rounded-b-2xl rounded-tr-2xl p-5 border border-white/10 shadow-2xl">
+                <!-- Generate Panel -->
                 <div id="panel-generate">
                     <input id="desc" type="text" placeholder="💡 Опиши шаблон, например: лендинг для кофейни" class="input-field" maxlength="500">
                     <button id="generateBtn" onclick="generate()" class="w-full p-4 btn-primary text-lg">✨ Создать шаблон</button>
                     <div class="spinner" id="spinner"></div>
                     <p id="status" class="mt-3 text-gray-400 text-xs text-center"></p>
                 </div>
+                
+                <!-- Auth Panel -->
                 <div id="panel-auth" style="display:none;">
                     <div id="auth-form-login">
                         <h3 class="text-sm font-bold mb-3">Вход</h3>
@@ -239,7 +256,43 @@ def home():
                     </div>
                     <p id="auth-status" class="mt-3 text-xs text-center text-gray-400"></p>
                 </div>
+                
+                <!-- Profile Panel -->
+                <div id="panel-profile" style="display:none;">
+                    <div id="profile-logged-in" style="display:none;">
+                        <h2 class="text-xl font-bold mb-2 text-center" id="profile-name"></h2>
+                        <p class="text-center text-2xl font-bold mb-1" id="profile-balance"></p>
+                        <div class="w-16 mx-auto mb-4 border-b-2 border-purple-500"></div>
+                        <p class="text-center text-gray-400 text-sm mb-6">Пакеты генераций</p>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="package-card">
+                                <h3>10 ген.</h3>
+                                <div class="price">150₽</div>
+                                <button class="btn-buy" disabled>Купить</button>
+                            </div>
+                            <div class="package-card">
+                                <h3>25 ген.</h3>
+                                <div class="price">300₽</div>
+                                <button class="btn-buy" disabled>Купить</button>
+                            </div>
+                            <div class="package-card popular">
+                                <h3>50 ген.</h3>
+                                <div class="price">600₽</div>
+                                <button class="btn-buy" disabled>Купить</button>
+                            </div>
+                            <div class="package-card">
+                                <h3>100 ген.</h3>
+                                <div class="price">1000₽</div>
+                                <button class="btn-buy" disabled>Купить</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="profile-logged-out">
+                        <p class="text-center text-gray-400 text-sm">Войдите, чтобы увидеть профиль.</p>
+                    </div>
+                </div>
             </div>
+            
             <div id="preview-container">
                 <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
                     <span class="text-sm text-gray-300">Предпросмотр</span>
@@ -252,32 +305,18 @@ def home():
                 </div>
                 <iframe id="preview-frame"></iframe>
             </div>
+            
             <div id="gallery-section" style="display:none; margin-top: 30px;">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-lg font-bold">📂 Мои шаблоны</h2>
-                    <button onclick="clearGallery()" class="text-xs text-gray-500 hover:text-red-400">Очистить</button>
-                </div>
+                <div class="flex justify-between items-center mb-4"><h2 class="text-lg font-bold">📂 Мои шаблоны</h2><button onclick="clearGallery()" class="text-xs text-gray-500 hover:text-red-400">Очистить</button></div>
                 <div id="gallery-list"></div>
             </div>
-            <div class="text-center mt-4">
-                <button onclick="toggleGallery()" class="text-sm text-gray-400 hover:text-white transition" id="gallery-toggle">📂 Сохранённые шаблоны</button>
-            </div>
-            <div class="text-center mt-6 pb-6">
-                <p class="text-xs text-gray-500">📱 Скоро в Google Play — SiteForge</p>
-            </div>
+            <div class="text-center mt-4"><button onclick="toggleGallery()" class="text-sm text-gray-400 hover:text-white transition" id="gallery-toggle">📂 Сохранённые шаблоны</button></div>
+            <div class="text-center mt-6 pb-6"><p class="text-xs text-gray-500">📱 Скоро в Google Play — SiteForge</p></div>
         </div>
-        <div id="help-modal" class="modal">
-            <div class="modal-content">
-                <div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">Как пользоваться</h2><button onclick="closeModal('help')" class="text-gray-500 hover:text-red-400 text-xl leading-none transition">✕</button></div>
-                <div class="text-sm space-y-2"><p><strong>1.</strong> Зарегистрируйся или войди.</p><p><strong>2.</strong> Опиши шаблон.</p><p><strong>3.</strong> Нажми «Создать шаблон».</p><p><strong>4.</strong> Сохрани, скачай или скопируй HTML-код.</p></div>
-            </div>
-        </div>
-        <div id="about-modal" class="modal">
-            <div class="modal-content">
-                <div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">О нас</h2><button onclick="closeModal('about')" class="text-gray-500 hover:text-red-400 text-xl leading-none transition">✕</button></div>
-                <div class="text-sm space-y-2"><p><strong>SiteForge</strong> — генератор HTML-шаблонов с помощью ИИ.</p><p>Создаём красивые адаптивные заготовки за секунды.</p><p class="text-gray-400 mt-3">Версия: 1.0</p><p class="text-gray-400">Сделано с ❤️</p></div>
-            </div>
-        </div>
+
+        <div id="help-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">Как пользоваться</h2><button onclick="closeModal('help')" class="text-gray-500 hover:text-red-400 text-xl leading-none transition">✕</button></div><div class="text-sm space-y-2"><p><strong>1.</strong> Зарегистрируйся или войди.</p><p><strong>2.</strong> Опиши шаблон.</p><p><strong>3.</strong> Нажми «Создать шаблон».</p><p><strong>4.</strong> Сохрани, скачай или скопируй HTML-код.</p></div></div></div>
+        <div id="about-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">О нас</h2><button onclick="closeModal('about')" class="text-gray-500 hover:text-red-400 text-xl leading-none transition">✕</button></div><div class="text-sm space-y-2"><p><strong>SiteForge</strong> — генератор HTML-шаблонов с помощью ИИ.</p><p>Создаём красивые адаптивные заготовки за секунды.</p><p class="text-gray-400 mt-3">Версия: 1.0</p><p class="text-gray-400">Сделано с ❤️</p></div></div></div>
+        
         <script>
             let currentHtml = '';
             let isGenerating = false;
@@ -289,17 +328,25 @@ def home():
             function updateUI() {
                 const balance = document.getElementById('balance-display');
                 const authBtn = document.getElementById('top-auth-btn');
+                const avatar = document.getElementById('avatar');
                 if (currentUser) {
                     const left = currentUser.is_superuser ? '∞' : Math.max(0, FREE_LIMIT - currentUser.generations_used);
                     balance.textContent = `Баланс: ${left}`;
-                    authBtn.textContent = currentUser.email.split('@')[0];
-                    authBtn.className = 'text-green-400 hover:text-green-300 text-xs transition';
-                    document.getElementById('nav-auth').textContent = '👤 Профиль';
+                    authBtn.style.display = 'none';
+                    avatar.style.display = 'flex';
+                    avatar.textContent = currentUser.email.charAt(0).toUpperCase();
+                    document.getElementById('profile-logged-in').style.display = 'block';
+                    document.getElementById('profile-logged-out').style.display = 'none';
+                    document.getElementById('profile-name').textContent = currentUser.email;
+                    document.getElementById('profile-balance').textContent = `Баланс: ${left} ген.`;
+                    document.getElementById('nav-profile').style.display = 'block';
                 } else {
                     balance.textContent = '';
-                    authBtn.textContent = 'Вход';
-                    authBtn.className = 'text-purple-400 hover:text-purple-300 text-xs transition';
-                    document.getElementById('nav-auth').textContent = '👤 Вход / Регистрация';
+                    authBtn.style.display = 'block';
+                    avatar.style.display = 'none';
+                    document.getElementById('profile-logged-in').style.display = 'none';
+                    document.getElementById('profile-logged-out').style.display = 'block';
+                    document.getElementById('nav-profile').style.display = 'none';
                 }
             }
             updateUI();
@@ -307,22 +354,16 @@ def home():
             function switchTab(tab) {
                 document.getElementById('panel-generate').style.display = tab === 'generate' ? 'block' : 'none';
                 document.getElementById('panel-auth').style.display = tab === 'auth' ? 'block' : 'none';
+                document.getElementById('panel-profile').style.display = tab === 'profile' ? 'block' : 'none';
                 document.getElementById('nav-generate').className = tab === 'generate' ? 'nav-btn active' : 'nav-btn inactive';
                 document.getElementById('nav-auth').className = tab === 'auth' ? 'nav-btn active' : 'nav-btn inactive';
+                document.getElementById('nav-profile').className = tab === 'profile' ? 'nav-btn active' : 'nav-btn inactive';
                 if (tab === 'auth') showLogin();
+                if (tab === 'profile') updateUI();
             }
             
-            function showLogin() {
-                document.getElementById('auth-form-login').style.display = 'block';
-                document.getElementById('auth-form-register').style.display = 'none';
-                document.getElementById('auth-status').textContent = '';
-            }
-            
-            function showRegister() {
-                document.getElementById('auth-form-login').style.display = 'none';
-                document.getElementById('auth-form-register').style.display = 'block';
-                document.getElementById('auth-status').textContent = '';
-            }
+            function showLogin() { document.getElementById('auth-form-login').style.display = 'block'; document.getElementById('auth-form-register').style.display = 'none'; document.getElementById('auth-status').textContent = ''; }
+            function showRegister() { document.getElementById('auth-form-login').style.display = 'none'; document.getElementById('auth-form-register').style.display = 'block'; document.getElementById('auth-status').textContent = ''; }
             
             async function login() {
                 const email = document.getElementById('login-email').value;
@@ -371,11 +412,7 @@ def home():
                 if (!desc) { status.textContent = 'Введи описание!'; return; }
                 if (!currentUser.is_superuser && currentUser.generations_used >= FREE_LIMIT) { status.textContent = '🔒 Лимит исчерпан.'; return; }
                 isGenerating = true; btn.disabled = true; spinner.style.display = 'block'; status.textContent = '⚡ Генерирую...';
-                fetch('/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ description: desc, email: currentUser.email, user_password: localStorage.getItem('siteforge_pass') || '' })
-                })
+                fetch('/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description: desc, email: currentUser.email, user_password: localStorage.getItem('siteforge_pass') || '' }) })
                 .then(res => res.json())
                 .then(data => {
                     if (data.error) { status.textContent = '❌ ' + data.error; }
