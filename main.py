@@ -119,9 +119,17 @@ def generate_site(req: SiteRequest):
         messages=[{
             "role": "system",
             "content": (
-                "Ты генератор HTML-шаблонов. Создай КРАСИВЫЙ адаптивный HTML-шаблон с Tailwind CSS 3 (CDN: cdn.jsdelivr.net/npm/tailwindcss@3/dist/tailwind.min.css). "
-                "ОБЯЗАТЕЛЬНО задай фон для body через class (bg-gray-100, bg-white, bg-blue-50 и т.д.). "
-                "Базовые секции, placeholder.com, неактивные ссылки, градиенты, тени. Отвечай ТОЛЬКО HTML в ```html ...```."
+                "content": (
+    "Ты генератор HTML-шаблонов. Пользователь описывает, какой шаблон нужен. "
+    "Создай КРАСИВЫЙ современный адаптивный одностраничный HTML-шаблон с Tailwind CSS (подключи через CDN). "
+    "Создавай шаблон с базовыми секциями (меню, контакты, описание), но без лишних функций (спецпредложения, команда, вакансии), если пользователь явно их не просил. "
+    "Для изображений используй заглушки placeholder.com или серый div с рамкой. "
+    "Шаблон должен быть полностью адаптивным для мобильных устройств. "
+    "Не допускай горизонтальной прокрутки на телефонах. Используй max-width: 100vw и overflow-x: hidden на body. "
+    "Все ссылки и кнопки должны быть НЕАКТИВНЫМИ заглушками. "
+    "Используй красивые градиенты, тени, анимации при наведении. "
+    "Отвечай ТОЛЬКО HTML-кодом в ```html ... ```. Без пояснений."
+)
             )
         }, {"role": "user", "content": f"Создай шаблон: {req.description}"}],
         temperature=0.8, max_tokens=4000
@@ -134,8 +142,6 @@ def generate_site(req: SiteRequest):
     html = re.sub(r"(<a\b[^>]*?)href='[^']*'", r"\1href='#'", html)
     html = re.sub(r'action="[^"]*"', 'action="#"', html)
 
-    body_tag = re.search(r'<body[^>]*>', html)
-    if body_tag and 'bg-' not in body_tag.group():
         html = html.replace('<body', '<body style="background:#f3f4f6"', 1)
 
     html = html.replace('</head>', '<style>body{max-width:100vw!important;overflow-x:hidden!important}a{text-decoration:none!important;pointer-events:none;cursor:default;color:inherit}</style></head>')
