@@ -134,7 +134,6 @@ def generate_site(req: SiteRequest):
     html = re.sub(r"(<a\b[^>]*?)href='[^']*'", r"\1href='#'", html)
     html = re.sub(r'action="[^"]*"', 'action="#"', html)
 
-    # Если фон не задан — добавляем
     body_tag = re.search(r'<body[^>]*>', html)
     if body_tag and 'bg-' not in body_tag.group():
         html = html.replace('<body', '<body style="background:#f3f4f6"', 1)
@@ -159,41 +158,313 @@ def view_site():
 @app.get("/", response_class=HTMLResponse)
 def home():
     return """
-    <!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>SiteForge</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
-    <script src="https://cdn.tailwindcss.com"></script><style>
-    #preview-frame{width:100%;height:70vh;border:none;border-radius:12px;display:none;background:transparent}
-    #preview-container{display:none;margin-top:20px;animation:fadeIn 0.3s}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-    .spinner{animation:spin 1s linear infinite;width:30px;height:30px;border:3px solid rgba(255,255,255,0.2);border-top-color:#8b5cf6;border-radius:50%;display:none;margin:10px auto}
-    @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-    .btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:14px;border-radius:14px;font-weight:bold;cursor:pointer;border:none}
-    .input-field{width:100%;padding:14px;border-radius:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;font-size:15px;outline:none;margin-bottom:16px}
-    .input-field:focus{border-color:#8b5cf6}
-    .site-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:14px;margin-bottom:8px;cursor:pointer}
-    .avatar{width:32px;height:32px;border-radius:50%;background:#8b5cf6;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold}
-    .top-avatar-wrapper{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.3);border-radius:20px;padding:4px 10px 4px 4px}
-    .top-email{font-size:12px;color:#9ca3af;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:100;align-items:center;justify-content:center}
-    .modal.active{display:flex}
-    .modal-content{background:#0f0d2e;border-radius:16px;padding:24px;max-width:500px;width:90%;border:1px solid rgba(255,255,255,0.1);color:#d1d5db}
-    .copy-menu{position:relative;display:inline-block}
-    .copy-dropdown{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#1e1b4b;border-radius:12px;padding:8px;min-width:180px;z-index:50;border:1px solid rgba(255,255,255,0.1);margin-bottom:4px}
-    .copy-menu.active .copy-dropdown{display:block}
-    .copy-option{display:block;width:100%;padding:8px 12px;text-align:left;background:none;border:none;color:#d1d5db;font-size:13px;cursor:pointer;border-radius:8px}
-    .copy-option:hover{background:rgba(139,92,246,0.2);color:white}
-    </style></head><body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
-    <div class="max-w-2xl w-full px-4 mx-auto py-6">
-    <div class="flex justify-between items-center mb-6"><div class="flex gap-2"><button onclick="openModal('help')" class="text-xs text-gray-500 hover:text-gray-300">Помощь</button><button onclick="openModal('about')" class="text-xs text-gray-500 hover:text-gray-300">О нас</button></div>
-    <div class="flex items-center gap-3"><span id="balance-display" class="text-sm text-white font-bold"></span><a href="/auth" id="top-auth-link" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium">Войти</a><a href="/profile" id="top-avatar-link" style="display:none"><div class="top-avatar-wrapper"><div class="avatar" id="avatar-icon"></div><span class="top-email" id="avatar-email"></span></div></a></div></div>
-    <div class="text-center mb-8"><div class="text-5xl mb-2">🚀</div><h1 class="text-4xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">SiteForge</h1><p class="text-gray-400 mt-2 text-sm">Создай HTML-шаблон за секунды</p></div>
-    <div class="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10"><input id="desc" type="text" placeholder="💡 Опиши шаблон" class="input-field" maxlength="500"><button id="generateBtn" onclick="generate()" class="w-full p-4 btn-primary text-lg">✨ Создать шаблон</button><div class="spinner" id="spinner"></div><p id="status" class="mt-4 text-gray-400 text-xs text-center"></p></div>
-    <div id="preview-container"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><span class="text-sm text-gray-300">Предпросмотр</span><div class="flex gap-1 flex-wrap items-center"><button onclick="saveToGallery()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg">💾</button><button onclick="downloadHTML()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg">📥</button><div class="copy-menu" id="copyMenu"><button onclick="toggleCopyMenu()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg">📋 Копировать ▾</button><div class="copy-dropdown"><button onclick="copyCode('full')" class="copy-option">📄 Весь HTML</button><button onclick="copyCode('body')" class="copy-option">📝 Только body</button><button onclick="copyCode('css')" class="copy-option">🎨 Только стили</button></div></div><button onclick="closePreview()" class="text-gray-500 hover:text-red-400 text-lg px-2">✕</button></div></div><iframe id="preview-frame"></iframe></div>
-    <div id="gallery-section" style="display:none;margin-top:30px"><div class="flex justify-between items-center mb-4"><h2 class="text-lg font-bold">📂 Мои шаблоны</h2><button onclick="clearGallery()" class="text-xs text-gray-500 hover:text-red-400">Очистить</button></div><div id="gallery-list"></div></div>
-    <div class="text-center mt-4"><button onclick="toggleGallery()" class="text-sm text-gray-400 hover:text-white">📂 Сохранённые шаблоны</button></div></div>
-    <div id="help-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">Как пользоваться</h2><button onclick="closeModal('help')" class="text-gray-500 hover:text-red-400 text-xl">✕</button></div><div class="text-sm space-y-2"><p><strong>1.</strong> Зарегистрируйся или войди.</p><p><strong>2.</strong> Опиши шаблон.</p><p><strong>3.</strong> Нажми «Создать».</p><p><strong>4.</strong> Копируй HTML, CSS или скачай файл.</p></div></div></div>
-    <div id="about-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">О нас</h2><button onclick="closeModal('about')" class="text-gray-500 hover:text-red-400 text-xl">✕</button></div><div class="text-sm space-y-2"><p><strong>SiteForge</strong> — генератор HTML-шаблонов с помощью ИИ.</p><p class="text-gray-400 mt-3">Версия: 1.0 | Сделано с ❤️</p></div></div></div>
-    <script>let currentHtml='',isGenerating=false,currentUser=JSON.parse(localStorage.getItem('siteforge_user')||'null'),gallery=JSON.parse(localStorage.getItem('siteforge_gallery')||'[]'),galleryVisible=4;const FREE_LIMIT=3;function updateTopBar(){const b=document.getElementById('balance-display'),a=document.getElementById('top-auth-link'),l=document.getElementById('top-avatar-link'),i=document.getElementById('avatar-icon'),e=document.getElementById('avatar-email');if(currentUser){const left=currentUser.is_superuser?'∞':Math.max(0,FREE_LIMIT-currentUser.generations_used);b.textContent='Баланс: '+left+' ген.';a.style.display='none';l.style.display='block';i.textContent=currentUser.email.charAt(0).toUpperCase();e.textContent=currentUser.email.split('@')[0]}else{b.textContent='';a.style.display='block';l.style.display='none'}}updateTopBar();function generate(){if(isGenerating)return;if(!currentUser){document.getElementById('status').textContent='❌ Сначала войдите!';window.location.href='/auth';return}const d=document.getElementById('desc').value,s=document.getElementById('status'),f=document.getElementById('preview-frame'),c=document.getElementById('preview-container'),btn=document.getElementById('generateBtn'),sp=document.getElementById('spinner');if(!d){s.textContent='Введи описание!';return}if(!currentUser.is_superuser&&currentUser.generations_used>=FREE_LIMIT){s.textContent='🔒 Лимит исчерпан.';return}isGenerating=true;btn.disabled=true;sp.style.display='block';s.textContent='⚡ Генерирую...';fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({description:d,email:currentUser.email,user_password:localStorage.getItem('siteforge_pass')||''})}).then(r=>r.json()).then(data=>{if(data.error){s.textContent='❌ '+data.error}else{if(!currentUser.is_superuser){currentUser.generations_used++;localStorage.setItem('siteforge_user',JSON.stringify(currentUser))}currentHtml=data.html;f.style.display='block';c.style.display='block';f.srcdoc=data.html;s.textContent='✅ Готово!';updateTopBar()}}).catch(e=>{s.textContent='❌ Ошибка: '+e.message}).finally(()=>{isGenerating=false;btn.disabled=false;sp.style.display='none'})}function saveToGallery(){if(!currentHtml){alert('Сначала создай шаблон!');return}gallery.unshift({title:document.getElementById('desc').value||'Без названия',html:currentHtml,date:new Date().toLocaleString()});if(gallery.length>50)gallery=gallery.slice(0,50);localStorage.setItem('siteforge_gallery',JSON.stringify(gallery));renderGallery();alert('Сохранено!')}function renderGallery(){const list=document.getElementById('gallery-list'),visible=gallery.slice(0,galleryVisible);list.innerHTML=visible.map((s,i)=>`<div class="site-card" onclick="loadFromGallery(${i})"><div class="flex justify-between items-center"><div><span class="text-sm font-medium">${s.title}</span><span class="text-xs text-gray-500 ml-2">${s.date}</span></div><button onclick="event.stopPropagation();deleteFromGallery(${i})" class="text-red-400 text-xs">Удалить</button></div></div>`).join('');if(gallery.length>4&&galleryVisible===4)list.innerHTML+=`<button onclick="showAll()" class="w-full text-center text-sm text-purple-400 py-2">Показать все (${gallery.length})</button>`;if(!gallery.length)list.innerHTML='<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>'}function showAll(){galleryVisible=gallery.length;renderGallery()}function loadFromGallery(i){const s=gallery[i];currentHtml=s.html;document.getElementById('desc').value=s.title;const f=document.getElementById('preview-frame');f.srcdoc=s.html;f.style.display='block';document.getElementById('preview-container').style.display='block'}function deleteFromGallery(i){if(confirm('Удалить?')){gallery.splice(i,1);localStorage.setItem('siteforge_gallery',JSON.stringify(gallery));renderGallery()}}function clearGallery(){if(confirm('Удалить ВСЁ?')){gallery=[];localStorage.setItem('siteforge_gallery',JSON.stringify(gallery));renderGallery()}}function toggleGallery(){const s=document.getElementById('gallery-section'),b=document.getElementById('gallery-toggle');if(s.style.display==='block'){s.style.display='none';b.textContent='📂 Сохранённые шаблоны'}else{s.style.display='block';b.textContent='📂 Скрыть шаблоны';galleryVisible=4;renderGallery()}}function toggleCopyMenu(){document.getElementById('copyMenu').classList.toggle('active')}function copyCode(mode){if(!currentHtml){alert('Сначала создай шаблон!');return}let t='';if(mode==='full')t=currentHtml;else if(mode==='body'){const m=currentHtml.match(/<body[^>]*>([\\s\\S]*)<\\/body>/i);t=m?m[1]:currentHtml}else if(mode==='css'){const m=currentHtml.match(/<style[^>]*>([\\s\\S]*)<\\/style>/i);t=m?m[1]:'/* нет */'}navigator.clipboard.writeText(t.trim()).then(()=>{alert('Скопировано!');toggleCopyMenu()})}function downloadHTML(){if(!currentHtml){alert('Сначала создай шаблон!');return}const b=new Blob([currentHtml],{type:'text/html'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='шаблон.html';a.click();URL.revokeObjectURL(u)}function closePreview(){document.getElementById('preview-frame').style.display='none';document.getElementById('preview-container').style.display='none';currentHtml='';document.getElementById('copyMenu').classList.remove('active')}function openModal(t){document.getElementById(t+'-modal').classList.add('active')}function closeModal(t){document.getElementById(t+'-modal').classList.remove('active')}window.onclick=function(e){if(e.target.classList.contains('modal'))e.target.classList.remove('active');if(!e.target.closest('.copy-menu'))document.getElementById('copyMenu').classList.remove('active')}renderGallery();</script></body></html>"""
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <title>SiteForge — Генератор</title>
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            #preview-frame { width: 100%; height: 70vh; border: none; border-radius: 12px; display: none; background: transparent; }
+            #preview-container { display: none; margin-top: 20px; animation: fadeIn 0.3s ease; }
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+            @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            .spinner { animation: spin 1s linear infinite; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #8b5cf6; border-radius: 50%; display: none; margin: 10px auto; }
+            .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 14px; border-radius: 14px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; text-align: center; }
+            .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99,102,241,0.4); }
+            .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+            .input-field { width: 100%; padding: 14px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 15px; outline: none; margin-bottom: 16px; }
+            .input-field:focus { border-color: #8b5cf6; box-shadow: 0 0 0 2px rgba(139,92,246,0.3); }
+            .site-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 14px; margin-bottom: 8px; cursor: pointer; }
+            .site-card:hover { background: rgba(255,255,255,0.06); }
+            .avatar { width: 32px; height: 32px; border-radius: 50%; background: #8b5cf6; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; cursor: pointer; }
+            .top-avatar-wrapper { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 4px 10px 4px 4px; }
+            .top-email { font-size: 12px; color: #9ca3af; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; }
+            .modal.active { display: flex; }
+            .modal-content { background: #0f0d2e; border-radius: 16px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); color: #d1d5db; }
+            .copy-menu { position: relative; display: inline-block; }
+            .copy-dropdown { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1e1b4b; border-radius: 12px; padding: 8px; min-width: 180px; z-index: 50; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 4px; }
+            .copy-menu.active .copy-dropdown { display: block; }
+            .copy-option { display: block; width: 100%; padding: 8px 12px; text-align: left; background: none; border: none; color: #d1d5db; font-size: 13px; cursor: pointer; border-radius: 8px; }
+            .copy-option:hover { background: rgba(139,92,246,0.2); color: white; }
+        </style>
+    </head>
+    <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
+        <div class="max-w-2xl w-full px-4 mx-auto py-6">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex gap-2">
+                    <button onclick="openModal('help')" class="text-xs text-gray-500 hover:text-gray-300 transition">Помощь</button>
+                    <button onclick="openModal('about')" class="text-xs text-gray-500 hover:text-gray-300 transition">О нас</button>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span id="balance-display" class="text-sm text-white font-bold"></span>
+                    <a href="/auth" id="top-auth-link" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition font-medium">Войти</a>
+                    <a href="/profile" id="top-avatar-link" style="display:none;">
+                        <div class="top-avatar-wrapper">
+                            <div class="avatar" id="avatar-icon"></div>
+                            <span class="top-email" id="avatar-email"></span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            <div class="text-center mb-8">
+                <div class="text-5xl mb-2">🚀</div>
+                <h1 class="text-4xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">SiteForge</h1>
+                <p class="text-gray-400 mt-2 text-sm">Создай HTML-шаблон за секунды</p>
+            </div>
+            <div class="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 shadow-2xl">
+                <input id="desc" type="text" placeholder="💡 Опиши шаблон, например: лендинг для кофейни" class="input-field" maxlength="500">
+                <button id="generateBtn" onclick="generate()" class="w-full p-4 btn-primary text-lg">✨ Создать шаблон</button>
+                <div class="spinner" id="spinner"></div>
+                <p id="status" class="mt-4 text-gray-400 text-xs text-center"></p>
+            </div>
+            <div id="preview-container">
+                <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                    <span class="text-sm text-gray-300">Предпросмотр</span>
+                    <div class="flex gap-1 flex-wrap items-center">
+                        <button onclick="saveToGallery()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">💾</button>
+                        <button onclick="downloadHTML()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">📥</button>
+                        <div class="copy-menu" id="copyMenu">
+                            <button onclick="toggleCopyMenu()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">📋 Копировать ▾</button>
+                            <div class="copy-dropdown">
+                                <button onclick="copyCode('full')" class="copy-option">📄 Весь HTML</button>
+                                <button onclick="copyCode('body')" class="copy-option">📝 Только body</button>
+                                <button onclick="copyCode('css')" class="copy-option">🎨 Только стили</button>
+                            </div>
+                        </div>
+                        <button onclick="closePreview()" class="text-gray-500 hover:text-red-400 text-lg px-2 leading-none transition">✕</button>
+                    </div>
+                </div>
+                <iframe id="preview-frame"></iframe>
+            </div>
+            <div id="gallery-section" style="display:none; margin-top: 30px;">
+                <div class="flex justify-between items-center mb-4"><h2 class="text-lg font-bold">📂 Мои шаблоны</h2><button onclick="clearGallery()" class="text-xs text-gray-500 hover:text-red-400">Очистить</button></div>
+                <div id="gallery-list"></div>
+            </div>
+            <div class="text-center mt-4"><button onclick="toggleGallery()" class="text-sm text-gray-400 hover:text-white transition" id="gallery-toggle">📂 Сохранённые шаблоны</button></div>
+        </div>
+        <div id="help-modal" class="modal">
+            <div class="modal-content">
+                <div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">Как пользоваться</h2><button onclick="closeModal('help')" class="text-gray-500 hover:text-red-400 text-xl leading-none transition">✕</button></div>
+                <div class="text-sm space-y-2"><p><strong>1.</strong> Зарегистрируйся или войди.</p><p><strong>2.</strong> Опиши шаблон.</p><p><strong>3.</strong> Нажми «Создать».</p><p><strong>4.</strong> Копируй HTML, CSS или скачай файл.</p></div>
+            </div>
+        </div>
+        <div id="about-modal" class="modal">
+            <div class="modal-content">
+                <div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">О нас</h2><button onclick="closeModal('about')" class="text-gray-500 hover:text-red-400 text-xl leading-none transition">✕</button></div>
+                <div class="text-sm space-y-2"><p><strong>SiteForge</strong> — генератор HTML-шаблонов с помощью ИИ.</p><p class="text-gray-400 mt-3">Версия: 1.0 | Сделано с ❤️</p></div>
+            </div>
+        </div>
+        <script>
+            let currentHtml = '', isGenerating = false;
+            let currentUser = JSON.parse(localStorage.getItem('siteforge_user') || 'null');
+            let gallery = JSON.parse(localStorage.getItem('siteforge_gallery') || '[]');
+            let galleryVisible = 4;
+            const FREE_LIMIT = 3;
+            
+            function updateTopBar() {
+                const balance = document.getElementById('balance-display');
+                const authLink = document.getElementById('top-auth-link');
+                const avatarLink = document.getElementById('top-avatar-link');
+                const avatarIcon = document.getElementById('avatar-icon');
+                const avatarEmail = document.getElementById('avatar-email');
+                if (currentUser) {
+                    const left = currentUser.is_superuser ? '∞' : Math.max(0, FREE_LIMIT - currentUser.generations_used);
+                    balance.textContent = 'Баланс: ' + left + ' ген.';
+                    authLink.style.display = 'none';
+                    avatarLink.style.display = 'block';
+                    avatarIcon.textContent = currentUser.email.charAt(0).toUpperCase();
+                    avatarEmail.textContent = currentUser.email.split('@')[0];
+                } else {
+                    balance.textContent = '';
+                    authLink.style.display = 'block';
+                    avatarLink.style.display = 'none';
+                }
+            }
+            updateTopBar();
+            
+            function generate() {
+                if (isGenerating) return;
+                if (!currentUser) {
+                    document.getElementById('status').textContent = '❌ Сначала войдите!';
+                    window.location.href = '/auth';
+                    return;
+                }
+                const desc = document.getElementById('desc').value;
+                const status = document.getElementById('status');
+                const frame = document.getElementById('preview-frame');
+                const container = document.getElementById('preview-container');
+                const btn = document.getElementById('generateBtn');
+                const spinner = document.getElementById('spinner');
+                if (!desc) { status.textContent = 'Введи описание!'; return; }
+                if (!currentUser.is_superuser && currentUser.generations_used >= FREE_LIMIT) {
+                    status.textContent = '🔒 Лимит исчерпан.';
+                    return;
+                }
+                isGenerating = true;
+                btn.disabled = true;
+                spinner.style.display = 'block';
+                status.textContent = '⚡ Генерирую...';
+                
+                fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        description: desc,
+                        email: currentUser.email,
+                        user_password: localStorage.getItem('siteforge_pass') || ''
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        status.textContent = '❌ ' + data.error;
+                    } else {
+                        if (!currentUser.is_superuser) {
+                            currentUser.generations_used++;
+                            localStorage.setItem('siteforge_user', JSON.stringify(currentUser));
+                        }
+                        currentHtml = data.html;
+                        frame.style.display = 'block';
+                        container.style.display = 'block';
+                        frame.srcdoc = data.html;
+                        status.textContent = '✅ Готово!';
+                        updateTopBar();
+                    }
+                })
+                .catch(e => { status.textContent = '❌ Ошибка: ' + e.message; })
+                .finally(() => {
+                    isGenerating = false;
+                    btn.disabled = false;
+                    spinner.style.display = 'none';
+                });
+            }
+            
+            function saveToGallery() {
+                if (!currentHtml) { alert('Сначала создай шаблон!'); return; }
+                const title = document.getElementById('desc').value || 'Без названия';
+                gallery.unshift({ title, html: currentHtml, date: new Date().toLocaleString() });
+                if (gallery.length > 50) gallery = gallery.slice(0, 50);
+                localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
+                renderGallery();
+                alert('Сохранено!');
+            }
+            
+            function renderGallery() {
+                const list = document.getElementById('gallery-list');
+                const visible = gallery.slice(0, galleryVisible);
+                list.innerHTML = visible.map((s, i) => `
+                    <div class="site-card" onclick="loadFromGallery(${i})">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <span class="text-sm font-medium">${s.title}</span>
+                                <span class="text-xs text-gray-500 ml-2">${s.date}</span>
+                            </div>
+                            <button onclick="event.stopPropagation(); deleteFromGallery(${i})" class="text-red-400 text-xs hover:text-red-300">Удалить</button>
+                        </div>
+                    </div>
+                `).join('');
+                if (gallery.length > 4 && galleryVisible === 4) {
+                    list.innerHTML += `<button onclick="showAll()" class="w-full text-center text-sm text-purple-400 hover:text-purple-300 py-2">Показать все (${gallery.length})</button>`;
+                }
+                if (!gallery.length) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>';
+            }
+            
+            function showAll() { galleryVisible = gallery.length; renderGallery(); }
+            
+            function loadFromGallery(i) {
+                const s = gallery[i];
+                currentHtml = s.html;
+                document.getElementById('desc').value = s.title;
+                const f = document.getElementById('preview-frame');
+                f.srcdoc = s.html;
+                f.style.display = 'block';
+                document.getElementById('preview-container').style.display = 'block';
+            }
+            
+            function deleteFromGallery(i) {
+                if (confirm('Удалить?')) {
+                    gallery.splice(i, 1);
+                    localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
+                    renderGallery();
+                }
+            }
+            
+            function clearGallery() {
+                if (confirm('Удалить ВСЁ?')) {
+                    gallery = [];
+                    localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
+                    renderGallery();
+                }
+            }
+            
+            function toggleGallery() {
+                const s = document.getElementById('gallery-section');
+                const b = document.getElementById('gallery-toggle');
+                if (s.style.display === 'block') {
+                    s.style.display = 'none';
+                    b.textContent = '📂 Сохранённые шаблоны';
+                } else {
+                    s.style.display = 'block';
+                    b.textContent = '📂 Скрыть шаблоны';
+                    galleryVisible = 4;
+                    renderGallery();
+                }
+            }
+            
+            function toggleCopyMenu() {
+                document.getElementById('copyMenu').classList.toggle('active');
+            }
+            
+            function copyCode(mode) {
+                if (!currentHtml) { alert('Сначала создай шаблон!'); return; }
+                let text = '';
+                if (mode === 'full') text = currentHtml;
+                else if (mode === 'body') {
+                    const m = currentHtml.match(/<body[^>]*>([\\s\\S]*)<\\/body>/i);
+                    text = m ? m[1] : currentHtml;
+                } else if (mode === 'css') {
+                    const m = currentHtml.match(/<style[^>]*>([\\s\\S]*)<\\/style>/i);
+                    text = m ? m[1] : '/* Стили не найдены */';
+                }
+                navigator.clipboard.writeText(text.trim()).then(() => {
+                    alert('Скопировано!');
+                    toggleCopyMenu();
+                });
+            }
+            
+            function downloadHTML() {
+                if (!currentHtml) { alert('Сначала создай шаблон!'); return; }
+                const b = new Blob([currentHtml], {type: 'text/html'});
+                const u = URL.createObjectURL(b);
+                const a = document.createElement('a');
+                a.href = u;
+                a.download = 'шаблон.html';
+                a.click();
+                URL.revokeObjectURL(u);
+            }
+            
+            function closePreview() {
+                document.getElementById('preview-frame').style.display = 'none';
+                document.getElementById('preview-container').style.display = 'none';
+                currentHtml = '';
+                document.getElementById('copyMenu').classList.remove('active');
+            }
+            
+            function openModal(t) { document.getElementById(t + '-modal').classList.add('active'); }
+            function closeModal(t) { document.getElementById(t + '-modal').classList.remove('active'); }
+            window.onclick = function(e) {
+                if (e.target.classList.contains('modal')) e.target.classList.remove('active');
+                if (!e.target.closest('.copy-menu')) document.getElementById('copyMenu').classList.remove('active');
+            }
+            renderGallery();
+        </script>
+    </body>
+    </html>
+    """
 
 @app.get("/profile", response_class=HTMLResponse)
 def profile_page():
