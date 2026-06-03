@@ -348,6 +348,27 @@ def home():
 @app.get("/profile", response_class=HTMLResponse)
 def profile_page():
     return """<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>SiteForge — Профиль</title><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>"><script src="https://cdn.tailwindcss.com"></script><style>.package-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;text-align:center}.package-card.popular{border-color:#f59e0b}.btn-buy{background:#8b5cf6;color:white;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:bold;border:none;opacity:0.5}.avatar-large{width:64px;height:64px;border-radius:50%;background:#8b5cf6;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:bold;margin:0 auto}</style></head><body class="bg-gray-950 text-white min-h-screen"><div class="max-w-2xl w-full px-4 mx-auto py-6"><a href="/" class="text-gray-400 hover:text-white text-sm">← Назад</a><div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 mt-4 relative"><div id="plo"><p class="text-center text-gray-400">Войдите. <a href="/auth" class="text-purple-400">Войти</a></p></div><div id="pli" style="display:none"><div class="avatar-large mb-4" id="pa"></div><h2 class="text-xl font-bold text-center mb-1" id="pe"></h2><p class="text-center text-3xl font-bold mb-2" id="pb"></p><div class="w-16 mx-auto border-b-2 border-purple-500 mb-6"></div><p class="text-center text-gray-400 text-sm mb-6">Пакеты генераций</p><div class="grid grid-cols-2 gap-3"><div class="package-card"><h3 class="text-lg font-bold">10 ген.</h3><p class="text-2xl font-bold my-2">150₽</p><button class="btn-buy" disabled>Скоро</button></div><div class="package-card"><h3 class="text-lg font-bold">25 ген.</h3><p class="text-2xl font-bold my-2">300₽</p><button class="btn-buy" disabled>Скоро</button></div><div class="package-card popular"><h3 class="text-lg font-bold">50 ген.</h3><p class="text-2xl font-bold my-2">600₽</p><button class="btn-buy" disabled>Скоро</button></div><div class="package-card"><h3 class="text-lg font-bold">100 ген.</h3><p class="text-2xl font-bold my-2">1000₽</p><button class="btn-buy" disabled>Скоро</button></div></div><div class="text-right mt-6"><button onclick="logout()" class="text-red-400 hover:text-red-300 text-sm">Выйти из аккаунта</button></div></div></div></div><script>const u=JSON.parse(localStorage.getItem('siteforge_user')||'null');if(u){document.getElementById('plo').style.display='none';document.getElementById('pli').style.display='block';document.getElementById('pa').textContent=u.email.charAt(0).toUpperCase();document.getElementById('pe').textContent=u.email;document.getElementById('pb').textContent=(u.is_superuser?'∞':Math.max(0,3-u.generations_used))+' ген.'}function logout(){localStorage.removeItem('siteforge_user');localStorage.removeItem('siteforge_pass');window.location.href='/'}</script></body></html>"""
+    @app.get("/thanks", response_class=HTMLResponse)
+def thanks_page():
+    return """
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+        <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SiteForge — Спасибо за покупку!</title>
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen flex items-center justify-center">
+        <div class="text-center px-4">
+            <div class="text-6xl mb-4">🎉</div>
+            <h1 class="text-3xl font-bold mb-2">Спасибо за покупку!</h1>
+            <p class="text-gray-400 mb-6">Генерации скоро будут начислены на ваш баланс.</p>
+            <a href="/profile" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl font-bold transition">Вернуться в профиль</a>
+        </div>
+    </body>
+    </html>
+    """
 
 @app.get("/auth", response_class=HTMLResponse)
 def auth_page():
