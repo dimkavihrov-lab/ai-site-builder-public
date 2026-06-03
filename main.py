@@ -120,14 +120,14 @@ def generate_site(req: SiteRequest):
         messages=[{
             "role": "system",
             "content": (
-    "Ты генератор HTML-шаблонов. Пользователь описывает, какой шаблон нужен. "
-    "Создай КРАСИВЫЙ современный адаптивный одностраничный HTML-шаблон с Tailwind CSS (подключи через CDN). "
-    "Создавай шаблон с базовыми секциями (меню, контакты, описание), но без лишних функций (спецпредложения, команда, вакансии), если пользователь явно их не просил. "
-    "Для изображений используй заглушки placeholder.com или серый div с рамкой. "
-    "Шаблон должен быть полностью адаптивным для мобильных устройств. "
-    "Все ссылки и кнопки должны быть НЕАКТИВНЫМИ заглушками. "
-    "Используй красивые градиенты, тени, анимации при наведении. "
-    "Отвечай ТОЛЬКО HTML-кодом в ```html ... ```. Без пояснений."
+                "Ты генератор HTML-шаблонов. Пользователь описывает, какой шаблон нужен. "
+                "Создай КРАСИВЫЙ современный адаптивный одностраничный HTML-шаблон с Tailwind CSS (подключи через CDN). "
+                "Создавай шаблон с базовыми секциями (меню, контакты, описание), но без лишних функций (спецпредложения, команда, вакансии), если пользователь явно их не просил. "
+                "Для изображений используй заглушки placeholder.com или серый div с рамкой. "
+                "Шаблон должен быть полностью адаптивным для мобильных устройств. "
+                "Все ссылки и кнопки должны быть НЕАКТИВНЫМИ заглушками. "
+                "Используй красивые градиенты, тени, анимации при наведении. "
+                "Отвечай ТОЛЬКО HTML-кодом в ```html ... ```. Без пояснений."
             )
         }, {
             "role": "user",
@@ -159,16 +159,9 @@ def generate_site(req: SiteRequest):
 def view_site():
     return last_site["html"]
 
-HEADER = """
-<div class="flex justify-between items-center mb-6">
-    <a href="/" class="text-gray-400 hover:text-white transition text-sm">← Назад</a>
-    <div class="flex items-center gap-3" id="top-bar"></div>
-</div>
-"""
-
 @app.get("/", response_class=HTMLResponse)
 def home():
-    return f"""
+    return """
     <!DOCTYPE html>
     <html lang="ru">
     <head>
@@ -178,34 +171,30 @@ def home():
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
-            #preview-frame {{ width: 100%; height: 70vh; border: none; border-radius: 12px; display: none; background: transparent; }}
-            #preview-container {{ display: none; margin-top: 20px; animation: fadeIn 0.3s ease; }}
-            @keyframes fadeIn {{ from {{ opacity: 0; transform: translateY(10px); }} to {{ opacity: 1; transform: translateY(0); }} }}
-            @keyframes spin {{ from {{ transform: rotate(0deg); }} to {{ transform: rotate(360deg); }} }}
-            .spinner {{ animation: spin 1s linear infinite; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #8b5cf6; border-radius: 50%; display: none; margin: 10px auto; }}
-            .btn-primary {{ background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 14px; border-radius: 14px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; text-align: center; }}
-            .btn-primary:hover:not(:disabled) {{ transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99,102,241,0.4); }}
-            .btn-primary:disabled {{ opacity: 0.5; cursor: not-allowed; }}
-            .input-field {{ width: 100%; padding: 14px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 15px; outline: none; margin-bottom: 16px; }}
-            .input-field:focus {{ border-color: #8b5cf6; box-shadow: 0 0 0 2px rgba(139,92,246,0.3); }}
-            .site-card {{ background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 14px; margin-bottom: 8px; cursor: pointer; }}
-            .site-card:hover {{ background: rgba(255,255,255,0.06); }}
-            .avatar {{ width: 32px; height: 32px; border-radius: 50%; background: #8b5cf6; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; cursor: pointer; transition: all 0.2s; }}
-            .avatar:hover {{ transform: scale(1.1); }}
-            .top-avatar-wrapper {{ display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 4px 10px 4px 4px; }}
-            .top-email {{ font-size: 12px; color: #9ca3af; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+            #preview-frame { width: 100%; height: 70vh; border: none; border-radius: 12px; display: none; background: transparent; }
+            #preview-container { display: none; margin-top: 20px; animation: fadeIn 0.3s ease; }
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+            @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            .spinner { animation: spin 1s linear infinite; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #8b5cf6; border-radius: 50%; display: none; margin: 10px auto; }
+            .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 14px; border-radius: 14px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; text-align: center; }
+            .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99,102,241,0.4); }
+            .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+            .input-field { width: 100%; padding: 14px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 15px; outline: none; margin-bottom: 16px; }
+            .input-field:focus { border-color: #8b5cf6; box-shadow: 0 0 0 2px rgba(139,92,246,0.3); }
+            .site-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 14px; margin-bottom: 8px; cursor: pointer; }
+            .site-card:hover { background: rgba(255,255,255,0.06); }
+            .avatar { width: 32px; height: 32px; border-radius: 50%; background: #8b5cf6; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+            .avatar:hover { transform: scale(1.1); }
+            .top-avatar-wrapper { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 4px 10px 4px 4px; }
+            .top-email { font-size: 12px; color: #9ca3af; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         </style>
     </head>
     <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
         <div class="max-w-2xl w-full px-4 mx-auto py-6">
             <div class="flex justify-between items-center mb-6">
-                <div class="flex gap-2">
-                    <a href="/" class="text-xs text-gray-500 hover:text-gray-300 transition">Генератор</a>
-                    <a href="/profile" class="text-xs text-gray-500 hover:text-gray-300 transition">Профиль</a>
-                    <a href="/auth" class="text-xs text-gray-500 hover:text-gray-300 transition">Вход</a>
-                </div>
-                <div class="flex items-center gap-2" id="top-bar">
-                    <span id="balance-display" class="text-xs text-gray-400"></span>
+                <div></div>
+                <div class="flex items-center gap-3" id="top-bar">
+                    <span id="balance-display" class="text-sm text-white font-bold"></span>
                     <a href="/auth" id="top-auth-link" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition font-medium">Войти</a>
                     <a href="/profile" id="top-avatar-link" style="display:none;">
                         <div class="top-avatar-wrapper">
@@ -257,63 +246,63 @@ def home():
             let galleryVisible = 4;
             const FREE_LIMIT = 3;
             
-            function updateTopBar() {{
+            function updateTopBar() {
                 const balance = document.getElementById('balance-display');
                 const authLink = document.getElementById('top-auth-link');
                 const avatarLink = document.getElementById('top-avatar-link');
                 const avatarIcon = document.getElementById('avatar-icon');
                 const avatarEmail = document.getElementById('avatar-email');
-                if (currentUser) {{
+                if (currentUser) {
                     const left = currentUser.is_superuser ? '∞' : Math.max(0, FREE_LIMIT - currentUser.generations_used);
-                    balance.textContent = 'Баланс: ' + left + ' ген.';
+                    balance.textContent = '⚡ ' + left + ' ген.';
                     authLink.style.display = 'none';
                     avatarLink.style.display = 'block';
                     avatarIcon.textContent = currentUser.email.charAt(0).toUpperCase();
                     avatarEmail.textContent = currentUser.email.split('@')[0];
-                }} else {{
+                } else {
                     balance.textContent = '';
                     authLink.style.display = 'block';
                     avatarLink.style.display = 'none';
-                }}
-            }}
+                }
+            }
             updateTopBar();
             
-            function generate() {{
+            function generate() {
                 if (isGenerating) return;
-                if (!currentUser) {{ document.getElementById('status').textContent = '❌ Сначала войдите!'; window.location.href='/auth'; return; }}
+                if (!currentUser) { document.getElementById('status').textContent = '❌ Сначала войдите!'; window.location.href='/auth'; return; }
                 const desc = document.getElementById('desc').value;
                 const status = document.getElementById('status');
                 const frame = document.getElementById('preview-frame');
                 const container = document.getElementById('preview-container');
                 const btn = document.getElementById('generateBtn');
                 const spinner = document.getElementById('spinner');
-                if (!desc) {{ status.textContent = 'Введи описание!'; return; }}
-                if (!currentUser.is_superuser && currentUser.generations_used >= FREE_LIMIT) {{ status.textContent = '🔒 Лимит исчерпан.'; return; }}
+                if (!desc) { status.textContent = 'Введи описание!'; return; }
+                if (!currentUser.is_superuser && currentUser.generations_used >= FREE_LIMIT) { status.textContent = '🔒 Лимит исчерпан.'; return; }
                 isGenerating = true; btn.disabled = true; spinner.style.display = 'block'; status.textContent = '⚡ Генерирую...';
-                fetch('/generate', {{ method: 'POST', headers: {{ 'Content-Type': 'application/json' }}, body: JSON.stringify({{ description: desc, email: currentUser.email, user_password: localStorage.getItem('siteforge_pass') || '' }}) }})
+                fetch('/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description: desc, email: currentUser.email, user_password: localStorage.getItem('siteforge_pass') || '' }) })
                 .then(res => res.json())
-                .then(data => {{
-                    if (data.error) {{ status.textContent = '❌ ' + data.error; }}
-                    else {{
-                        if (!currentUser.is_superuser) {{ currentUser.generations_used++; localStorage.setItem('siteforge_user', JSON.stringify(currentUser)); }}
+                .then(data => {
+                    if (data.error) { status.textContent = '❌ ' + data.error; }
+                    else {
+                        if (!currentUser.is_superuser) { currentUser.generations_used++; localStorage.setItem('siteforge_user', JSON.stringify(currentUser)); }
                         currentHtml = data.html; frame.style.display = 'block'; container.style.display = 'block'; frame.srcdoc = data.html;
                         status.textContent = '✅ Готово!'; updateTopBar();
-                    }}
-                }})
-                .catch(e => {{ status.textContent = '❌ Ошибка: ' + e.message; }})
-                .finally(() => {{ isGenerating = false; btn.disabled = false; spinner.style.display = 'none'; }});
-            }}
+                    }
+                })
+                .catch(e => { status.textContent = '❌ Ошибка: ' + e.message; })
+                .finally(() => { isGenerating = false; btn.disabled = false; spinner.style.display = 'none'; });
+            }
             
-            function saveToGallery() {{ if (!currentHtml) {{ alert('Сначала создай шаблон!'); return; }} const title = document.getElementById('desc').value || 'Без названия'; gallery.unshift({{ title, html: currentHtml, date: new Date().toLocaleString() }}); if (gallery.length > 50) gallery = gallery.slice(0, 50); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); alert('Сохранено!'); }}
-            function renderGallery() {{ const list = document.getElementById('gallery-list'); const visible = gallery.slice(0, galleryVisible); list.innerHTML = visible.map((s, i) => `<div class="site-card" onclick="loadFromGallery(${{i}})"><div class="flex justify-between items-center"><div><span class="text-sm font-medium">${{s.title}}</span><span class="text-xs text-gray-500 ml-2">${{s.date}}</span></div><button onclick="event.stopPropagation(); deleteFromGallery(${{i}})" class="text-red-400 text-xs hover:text-red-300">Удалить</button></div></div>`).join(''); if (gallery.length > 4 && galleryVisible === 4) list.innerHTML += `<button onclick="showAll()" class="w-full text-center text-sm text-purple-400 hover:text-purple-300 py-2">Показать все (${{gallery.length}})</button>`; if (!gallery.length) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>'; }}
-            function showAll() {{ galleryVisible = gallery.length; renderGallery(); }}
-            function loadFromGallery(i) {{ const s = gallery[i]; currentHtml = s.html; document.getElementById('desc').value = s.title; const f = document.getElementById('preview-frame'); f.srcdoc = s.html; f.style.display = 'block'; document.getElementById('preview-container').style.display = 'block'; }}
-            function deleteFromGallery(i) {{ if (confirm('Удалить?')) {{ gallery.splice(i, 1); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); }} }}
-            function clearGallery() {{ if (confirm('Удалить ВСЁ?')) {{ gallery = []; localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); }} }}
-            function toggleGallery() {{ const s = document.getElementById('gallery-section'), b = document.getElementById('gallery-toggle'); if (s.style.display === 'block') {{ s.style.display = 'none'; b.textContent = '📂 Сохранённые шаблоны'; }} else {{ s.style.display = 'block'; b.textContent = '📂 Скрыть шаблоны'; galleryVisible = 4; renderGallery(); }} }}
-            function copyCode() {{ if (!currentHtml) {{ alert('Сначала создай шаблон!'); return; }} navigator.clipboard.writeText(currentHtml).then(() => alert('Скопировано!')); }}
-            function downloadHTML() {{ if (!currentHtml) {{ alert('Сначала создай шаблон!'); return; }} const b = new Blob([currentHtml], {{type: 'text/html'}}); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = 'шаблон.html'; a.click(); URL.revokeObjectURL(u); }}
-            function closePreview() {{ document.getElementById('preview-frame').style.display = 'none'; document.getElementById('preview-container').style.display = 'none'; currentHtml = ''; }}
+            function saveToGallery() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } const title = document.getElementById('desc').value || 'Без названия'; gallery.unshift({ title, html: currentHtml, date: new Date().toLocaleString() }); if (gallery.length > 50) gallery = gallery.slice(0, 50); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); alert('Сохранено!'); }
+            function renderGallery() { const list = document.getElementById('gallery-list'); const visible = gallery.slice(0, galleryVisible); list.innerHTML = visible.map((s, i) => `<div class="site-card" onclick="loadFromGallery(${i})"><div class="flex justify-between items-center"><div><span class="text-sm font-medium">${s.title}</span><span class="text-xs text-gray-500 ml-2">${s.date}</span></div><button onclick="event.stopPropagation(); deleteFromGallery(${i})" class="text-red-400 text-xs hover:text-red-300">Удалить</button></div></div>`).join(''); if (gallery.length > 4 && galleryVisible === 4) list.innerHTML += `<button onclick="showAll()" class="w-full text-center text-sm text-purple-400 hover:text-purple-300 py-2">Показать все (${gallery.length})</button>`; if (!gallery.length) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>'; }
+            function showAll() { galleryVisible = gallery.length; renderGallery(); }
+            function loadFromGallery(i) { const s = gallery[i]; currentHtml = s.html; document.getElementById('desc').value = s.title; const f = document.getElementById('preview-frame'); f.srcdoc = s.html; f.style.display = 'block'; document.getElementById('preview-container').style.display = 'block'; }
+            function deleteFromGallery(i) { if (confirm('Удалить?')) { gallery.splice(i, 1); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
+            function clearGallery() { if (confirm('Удалить ВСЁ?')) { gallery = []; localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
+            function toggleGallery() { const s = document.getElementById('gallery-section'), b = document.getElementById('gallery-toggle'); if (s.style.display === 'block') { s.style.display = 'none'; b.textContent = '📂 Сохранённые шаблоны'; } else { s.style.display = 'block'; b.textContent = '📂 Скрыть шаблоны'; galleryVisible = 4; renderGallery(); } }
+            function copyCode() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } navigator.clipboard.writeText(currentHtml).then(() => alert('Скопировано!')); }
+            function downloadHTML() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } const b = new Blob([currentHtml], {type: 'text/html'}); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = 'шаблон.html'; a.click(); URL.revokeObjectURL(u); }
+            function closePreview() { document.getElementById('preview-frame').style.display = 'none'; document.getElementById('preview-container').style.display = 'none'; currentHtml = ''; }
             renderGallery();
         </script>
     </body>
@@ -341,15 +330,9 @@ def profile_page():
     </head>
     <body class="bg-gray-950 text-white min-h-screen">
         <div class="max-w-2xl w-full px-4 mx-auto py-6">
-            <div class="flex justify-between items-center mb-6">
-                <a href="/" class="text-gray-400 hover:text-white transition text-sm">← Назад к генератору</a>
-                <div class="flex gap-2">
-                    <a href="/" class="text-xs text-gray-500 hover:text-gray-300">Генератор</a>
-                    <a href="/auth" class="text-xs text-gray-500 hover:text-gray-300">Вход</a>
-                </div>
-            </div>
+            <a href="/" class="text-gray-400 hover:text-white transition text-sm">← Назад к генератору</a>
             
-            <div id="profile-content" class="bg-gray-900 rounded-2xl p-8 border border-gray-800">
+            <div id="profile-content" class="bg-gray-900 rounded-2xl p-8 border border-gray-800 mt-4">
                 <div id="profile-logged-out">
                     <p class="text-center text-gray-400">Войдите, чтобы увидеть профиль.</p>
                     <div class="text-center mt-4"><a href="/auth" class="text-purple-400 hover:underline text-sm">Войти</a></div>
@@ -357,6 +340,7 @@ def profile_page():
                 <div id="profile-logged-in" style="display:none;">
                     <div class="avatar-large mb-4" id="profile-avatar"></div>
                     <h2 class="text-xl font-bold text-center mb-1" id="profile-email"></h2>
+                    <button onclick="logout()" class="text-red-400 hover:text-red-300 text-xs mt-2 block mx-auto mb-4">Выйти из аккаунта</button>
                     <p class="text-center text-3xl font-bold mb-2" id="profile-balance"></p>
                     <div class="w-16 mx-auto border-b-2 border-purple-500 mb-6"></div>
                     <p class="text-center text-gray-400 text-sm mb-6">Пакеты генераций</p>
@@ -378,6 +362,11 @@ def profile_page():
                 document.getElementById('profile-email').textContent = user.email;
                 const left = user.is_superuser ? '∞' : Math.max(0, 3 - user.generations_used);
                 document.getElementById('profile-balance').textContent = left + ' ген.';
+            }
+            function logout() {
+                localStorage.removeItem('siteforge_user');
+                localStorage.removeItem('siteforge_pass');
+                window.location.href = '/';
             }
         </script>
     </body>
@@ -403,10 +392,8 @@ def auth_page():
     </head>
     <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
         <div class="max-w-md w-full px-4 mx-auto py-12">
-            <div class="flex justify-between items-center mb-6">
-                <a href="/" class="text-gray-400 hover:text-white transition text-sm">← Назад</a>
-            </div>
-            <div class="text-center mb-8"><div class="text-5xl mb-2">🚀</div><h1 class="text-2xl font-bold">Вход / Регистрация</h1></div>
+            <a href="/" class="text-gray-400 hover:text-white transition text-sm">← Назад</a>
+            <div class="text-center mb-8 mt-4"><div class="text-5xl mb-2">🚀</div><h1 class="text-2xl font-bold">Вход / Регистрация</h1></div>
             <div class="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10">
                 <div id="auth-form-login">
                     <h3 class="text-sm font-bold mb-4">Вход</h3>
