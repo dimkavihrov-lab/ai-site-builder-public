@@ -121,7 +121,7 @@ def generate_site(req: SiteRequest):
             "content": (
     "Ты генератор HTML-шаблонов. Пользователь описывает, какой шаблон нужен. "
     "Создай КРАСИВЫЙ современный адаптивный одностраничный HTML-шаблон с Tailwind CSS 3 (подключи через CDN: https://cdn.jsdelivr.net/npm/tailwindcss@3/dist/tailwind.min.css). "
-    "ВАЖНО: всегда используй ЯВНЫЙ фон для body (например bg-gray-100 или bg-white). Не используй прозрачный фон. "
+    "ВАЖНО: ты ОБЯЗАН задать фон для body (например bg-gray-100 или bg-white). Никогда не оставляй прозрачный фон. "
     "ВАЖНО: добавь в body стили max-width: 100vw; overflow-x: hidden; чтобы не было горизонтальной прокрутки. "
     "Создавай шаблон с базовыми секциями (меню, контакты, описание), но без лишних функций (спецпредложения, команда, вакансии), если пользователь явно их не просил. "
     "Для изображений используй заглушки placeholder.com или серый div с рамкой. "
@@ -144,7 +144,7 @@ def generate_site(req: SiteRequest):
     html = re.sub(r'(<a\b[^>]*?)href="[^"]*"', r'\1href="#"', html)
     html = re.sub(r"(<a\b[^>]*?)href='[^']*'", r"\1href='#'", html)
     html = re.sub(r'action="[^"]*"', 'action="#"', html)
-    html = html.replace('</head>', '<style>body{background:#f3f4f6!important;max-width:100vw!important;overflow-x:hidden!important}a{text-decoration:none!important;pointer-events:none;cursor:default;color:inherit}</style></head>')
+    html = html.replace('</head>', '<style>body{max-width:100vw!important;overflow-x:hidden!important}a{text-decoration:none!important;pointer-events:none;cursor:default;color:inherit}</style></head>')
 
     if not user["is_superuser"]:
         conn = get_db()
