@@ -1,10 +1,13 @@
 import os
 import re
+import smtplib
+import secrets
+from email.mime.text import MIMEText
 import psycopg2
 import psycopg2.extras
 import bcrypt
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -32,6 +35,31 @@ def get_db():
             raise Exception("DATABASE_URL or PGHOST/PGPASSWORD not set")
     return psycopg2.connect(database_url)
 
+def send_verification_email(email: str, token: str):
+    smtp_host = os.getenv("SMTP_HOST", "smtp.yandex.ru")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user = os.getenv("SMTP_USER")
+    smtp_password = os.getenv("SMTP_PASSWORD")
+    
+    if not smtp_user or not smtp_password:
+        return False
+    
+    verify_url = f"https://ai-site-builder-public-production.up.railway.app/verify?email={email}&token={token}"
+    msg = MIMEText(f"Привет!\n\nПодтверди email для SiteForge:\n{verify_url}\n\nЕсли ты не регистрировался, игнорируй это письмо.", "plain", "utf-8")
+    msg["Subject"] = "Подтверждение email — SiteForge"
+    msg["From"] = smtp_user
+    msg["To"] = email
+    
+    try:
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.sendmail(smtp_user, [email], msg.as_string())
+        return True
+    except Exception as e:
+        print(f"Email error: {e}")
+        return False
+
 def init_db():
     conn = get_db()
     cur = conn.cursor()
@@ -42,9 +70,17 @@ def init_db():
             password_hash VARCHAR(255) NOT NULL,
             generations_used INTEGER DEFAULT 0,
             is_superuser BOOLEAN DEFAULT FALSE,
+            email_verified BOOLEAN DEFAULT FALSE,
+            verification_token VARCHAR(64),
             created_at TIMESTAMP DEFAULT NOW()
         )
     """)
+    # Добавим колонки, если их нет (для существующих баз)
+    try:
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE")
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token VARCHAR(64)")
+    except:
+        pass
     conn.commit()
     cur.close()
     conn.close()
@@ -68,6 +104,22 @@ class AuthRequest(BaseModel):
     email: str
     password: str
 
+@app.get("/verify")
+def verify_email(email: str, token: str):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM users WHERE email = %s AND verification_token = %s", (email, token))
+    user = cur.fetchone()
+    if user:
+        cur.execute("UPDATE users SET email_verified = TRUE, verification_token = NULL WHERE email = %s", (email,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return HTMLResponse("<h2>✅ Email подтверждён! <a href='/'>Вернуться на сайт</a></h2>")
+    cur.close()
+    conn.close()
+    return HTMLResponse("<h2>❌ Неверная ссылка</h2>")
+
 @app.post("/register")
 def register(req: AuthRequest):
     conn = get_db()
@@ -77,13 +129,21 @@ def register(req: AuthRequest):
         cur.close()
         conn.close()
         raise HTTPException(status_code=400, detail="Email уже зарегистрирован")
+    
     password_hash = bcrypt.hashpw(req.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    cur.execute("INSERT INTO users (email, password_hash) VALUES (%s, %s) RETURNING id", (req.email, password_hash))
+    token = secrets.token_urlsafe(32)
+    
+    cur.execute(
+        "INSERT INTO users (email, password_hash, verification_token) VALUES (%s, %s, %s) RETURNING id",
+        (req.email, password_hash, token)
+    )
     user_id = cur.fetchone()[0]
     conn.commit()
     cur.close()
     conn.close()
-    return {"message": "Регистрация успешна", "user_id": user_id}
+    
+    send_verification_email(req.email, token)
+    return {"message": "Регистрация успешна. Проверьте почту для подтверждения email.", "user_id": user_id}
 
 @app.post("/login")
 def login(req: AuthRequest):
@@ -95,6 +155,8 @@ def login(req: AuthRequest):
     conn.close()
     if not user or not bcrypt.checkpw(req.password.encode('utf-8'), user["password_hash"].encode('utf-8')):
         raise HTTPException(status_code=401, detail="Неверный email или пароль")
+    if not user["email_verified"]:
+        raise HTTPException(status_code=403, detail="Email не подтверждён. Проверьте почту.")
     return {"email": user["email"], "generations_used": user["generations_used"], "is_superuser": user["is_superuser"]}
 
 @app.post("/edit")
@@ -113,35 +175,26 @@ def generate_site(req: SiteRequest):
     if not user or not bcrypt.checkpw(req.user_password.encode('utf-8'), user["password_hash"].encode('utf-8')):
         return {"error": "Неверный email или пароль"}
     if not user["is_superuser"] and user["generations_used"] >= FREE_LIMIT:
-        return {"error": f"Лимит исчерпан ({FREE_LIMIT} генераций). Ждите обновлений!"}
+        return {"error": f"Лимит исчерпан ({FREE_LIMIT} генераций)."}
     
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{
             "role": "system",
             "content": (
-                "Ты генератор HTML-шаблонов. Пользователь описывает, какой шаблон нужен. "
-                "Создай КРАСИВЫЙ современный адаптивный одностраничный HTML-шаблон с Tailwind CSS (подключи через CDN). "
-                "Создавай шаблон с базовыми секциями (меню, контакты, описание), но без лишних функций (спецпредложения, команда, вакансии), если пользователь явно их не просил. "
-                "Для изображений используй заглушки placeholder.com или серый div с рамкой. "
-                "Шаблон должен быть полностью адаптивным для мобильных устройств. "
-                "Все ссылки и кнопки должны быть НЕАКТИВНЫМИ заглушками. "
-                "Используй красивые градиенты, тени, анимации при наведении. "
-                "Отвечай ТОЛЬКО HTML-кодом в ```html ... ```. Без пояснений."
+                "Ты генератор HTML-шаблонов. Создай КРАСИВЫЙ адаптивный HTML-шаблон с Tailwind CSS (CDN). "
+                "Базовые секции (меню, контакты, описание), без лишних функций. "
+                "Изображения — placeholder.com. Все ссылки неактивны. "
+                "Градиенты, тени, анимации. Отвечай ТОЛЬКО HTML в ```html ...```."
             )
-        }, {
-            "role": "user",
-            "content": f"Создай шаблон: {req.description}"
-        }],
-        temperature=0.8,
-        max_tokens=4000
+        }, {"role": "user", "content": f"Создай шаблон: {req.description}"}],
+        temperature=0.8, max_tokens=4000
     )
 
     raw = response.choices[0].message.content.strip()
     html = raw.split("```html")[1].split("```")[0].strip() if "```html" in raw else raw.split("```")[1].split("```")[0].strip() if "```" in raw else raw
     html = re.sub(r'href="[^"]*"', 'href="#"', html)
     html = re.sub(r"href='[^']*'", "href='#'", html)
-    html = re.sub(r'action="[^"]*"', 'action="#"', html)
     html = html.replace('</head>', '<style>a{text-decoration:none!important;pointer-events:none;cursor:default;color:inherit}</style></head>')
 
     if not user["is_superuser"]:
@@ -165,8 +218,7 @@ def home():
     <!DOCTYPE html>
     <html lang="ru">
     <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>SiteForge — Генератор</title>
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
         <script src="https://cdn.tailwindcss.com"></script>
@@ -176,133 +228,58 @@ def home():
             @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
             @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
             .spinner { animation: spin 1s linear infinite; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #8b5cf6; border-radius: 50%; display: none; margin: 10px auto; }
-            .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 14px; border-radius: 14px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; text-align: center; }
-            .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99,102,241,0.4); }
-            .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+            .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 14px; border-radius: 14px; font-weight: bold; cursor: pointer; border: none; }
             .input-field { width: 100%; padding: 14px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 15px; outline: none; margin-bottom: 16px; }
-            .input-field:focus { border-color: #8b5cf6; box-shadow: 0 0 0 2px rgba(139,92,246,0.3); }
+            .input-field:focus { border-color: #8b5cf6; }
             .site-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 14px; margin-bottom: 8px; cursor: pointer; }
-            .site-card:hover { background: rgba(255,255,255,0.06); }
-            .avatar { width: 32px; height: 32px; border-radius: 50%; background: #8b5cf6; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; cursor: pointer; transition: all 0.2s; }
-            .avatar:hover { transform: scale(1.1); }
+            .avatar { width: 32px; height: 32px; border-radius: 50%; background: #8b5cf6; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; }
             .top-avatar-wrapper { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 4px 10px 4px 4px; }
             .top-email { font-size: 12px; color: #9ca3af; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; }
+            .modal.active { display: flex; }
+            .modal-content { background: #0f0d2e; border-radius: 16px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); color: #d1d5db; }
         </style>
     </head>
     <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
         <div class="max-w-2xl w-full px-4 mx-auto py-6">
             <div class="flex justify-between items-center mb-6">
                 <div></div>
-                <div class="flex items-center gap-3" id="top-bar">
+                <div class="flex items-center gap-3">
                     <span id="balance-display" class="text-sm text-white font-bold"></span>
                     <a href="/auth" id="top-auth-link" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition font-medium">Войти</a>
-                    <a href="/profile" id="top-avatar-link" style="display:none;">
-                        <div class="top-avatar-wrapper">
-                            <div class="avatar" id="avatar-icon"></div>
-                            <span class="top-email" id="avatar-email"></span>
-                        </div>
-                    </a>
+                    <a href="/profile" id="top-avatar-link" style="display:none;"><div class="top-avatar-wrapper"><div class="avatar" id="avatar-icon"></div><span class="top-email" id="avatar-email"></span></div></a>
                 </div>
             </div>
-            
-            <div class="text-center mb-8">
-                <div class="text-5xl mb-2">🚀</div>
-                <h1 class="text-4xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">SiteForge</h1>
-                <p class="text-gray-400 mt-2 text-sm">Создай HTML-шаблон за секунды</p>
-            </div>
-            
+            <div class="text-center mb-8"><div class="text-5xl mb-2">🚀</div><h1 class="text-4xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">SiteForge</h1>
+            <div class="flex justify-center gap-3 mt-2"><button onclick="openModal('help')" class="text-xs text-gray-500 hover:text-gray-300">Помощь</button><button onclick="openModal('about')" class="text-xs text-gray-500 hover:text-gray-300">О нас</button></div></div>
             <div class="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 shadow-2xl">
-                <input id="desc" type="text" placeholder="💡 Опиши шаблон, например: лендинг для кофейни" class="input-field" maxlength="500">
+                <input id="desc" type="text" placeholder="💡 Опиши шаблон" class="input-field" maxlength="500">
                 <button id="generateBtn" onclick="generate()" class="w-full p-4 btn-primary text-lg">✨ Создать шаблон</button>
-                <div class="spinner" id="spinner"></div>
-                <p id="status" class="mt-4 text-gray-400 text-xs text-center"></p>
+                <div class="spinner" id="spinner"></div><p id="status" class="mt-4 text-gray-400 text-xs text-center"></p>
             </div>
-            
-            <div id="preview-container">
-                <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
-                    <span class="text-sm text-gray-300">Предпросмотр</span>
-                    <div class="flex gap-1 flex-wrap">
-                        <button onclick="saveToGallery()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">💾</button>
-                        <button onclick="downloadHTML()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">📥</button>
-                        <button onclick="copyCode()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">📋</button>
-                        <button onclick="closePreview()" class="text-gray-500 hover:text-red-400 text-lg px-2 leading-none transition">✕</button>
-                    </div>
-                </div>
-                <iframe id="preview-frame"></iframe>
-            </div>
-            
-            <div id="gallery-section" style="display:none; margin-top: 30px;">
-                <div class="flex justify-between items-center mb-4"><h2 class="text-lg font-bold">📂 Мои шаблоны</h2><button onclick="clearGallery()" class="text-xs text-gray-500 hover:text-red-400">Очистить</button></div>
-                <div id="gallery-list"></div>
-            </div>
-            <div class="text-center mt-4"><button onclick="toggleGallery()" class="text-sm text-gray-400 hover:text-white transition" id="gallery-toggle">📂 Сохранённые шаблоны</button></div>
+            <div id="preview-container"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><span class="text-sm text-gray-300">Предпросмотр</span><div class="flex gap-1 flex-wrap"><button onclick="saveToGallery()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg">💾</button><button onclick="downloadHTML()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg">📥</button><button onclick="copyCode()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg">📋</button><button onclick="closePreview()" class="text-gray-500 hover:text-red-400 text-lg px-2">✕</button></div></div><iframe id="preview-frame"></iframe></div>
+            <div id="gallery-section" style="display:none; margin-top: 30px;"><div class="flex justify-between items-center mb-4"><h2 class="text-lg font-bold">📂 Мои шаблоны</h2><button onclick="clearGallery()" class="text-xs text-gray-500 hover:text-red-400">Очистить</button></div><div id="gallery-list"></div></div>
+            <div class="text-center mt-4"><button onclick="toggleGallery()" class="text-sm text-gray-400 hover:text-white" id="gallery-toggle">📂 Сохранённые шаблоны</button></div>
         </div>
-        
+        <div id="help-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">Как пользоваться</h2><button onclick="closeModal('help')" class="text-gray-500 hover:text-red-400 text-xl">✕</button></div><div class="text-sm space-y-2"><p><strong>1.</strong> Зарегистрируйся и подтверди email.</p><p><strong>2.</strong> Опиши шаблон.</p><p><strong>3.</strong> Нажми «Создать».</p><p><strong>4.</strong> Сохрани, скачай или скопируй HTML.</p></div></div></div>
+        <div id="about-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">О нас</h2><button onclick="closeModal('about')" class="text-gray-500 hover:text-red-400 text-xl">✕</button></div><div class="text-sm space-y-2"><p><strong>SiteForge</strong> — генератор HTML-шаблонов с помощью ИИ.</p><p>Создаём красивые заготовки за секунды.</p><p class="text-gray-400 mt-3">Версия: 1.0 | Сделано с ❤️</p></div></div></div>
         <script>
-            let currentHtml = '';
-            let isGenerating = false;
-            let currentUser = JSON.parse(localStorage.getItem('siteforge_user') || 'null');
-            let gallery = JSON.parse(localStorage.getItem('siteforge_gallery') || '[]');
-            let galleryVisible = 4;
-            const FREE_LIMIT = 3;
-            
-            function updateTopBar() {
-                const balance = document.getElementById('balance-display');
-                const authLink = document.getElementById('top-auth-link');
-                const avatarLink = document.getElementById('top-avatar-link');
-                const avatarIcon = document.getElementById('avatar-icon');
-                const avatarEmail = document.getElementById('avatar-email');
-                if (currentUser) {
-                    const left = currentUser.is_superuser ? '∞' : Math.max(0, FREE_LIMIT - currentUser.generations_used);
-                    balance.textContent = '⚡ ' + left + ' ген.';
-                    authLink.style.display = 'none';
-                    avatarLink.style.display = 'block';
-                    avatarIcon.textContent = currentUser.email.charAt(0).toUpperCase();
-                    avatarEmail.textContent = currentUser.email.split('@')[0];
-                } else {
-                    balance.textContent = '';
-                    authLink.style.display = 'block';
-                    avatarLink.style.display = 'none';
-                }
-            }
-            updateTopBar();
-            
-            function generate() {
-                if (isGenerating) return;
-                if (!currentUser) { document.getElementById('status').textContent = '❌ Сначала войдите!'; window.location.href='/auth'; return; }
-                const desc = document.getElementById('desc').value;
-                const status = document.getElementById('status');
-                const frame = document.getElementById('preview-frame');
-                const container = document.getElementById('preview-container');
-                const btn = document.getElementById('generateBtn');
-                const spinner = document.getElementById('spinner');
-                if (!desc) { status.textContent = 'Введи описание!'; return; }
-                if (!currentUser.is_superuser && currentUser.generations_used >= FREE_LIMIT) { status.textContent = '🔒 Лимит исчерпан.'; return; }
-                isGenerating = true; btn.disabled = true; spinner.style.display = 'block'; status.textContent = '⚡ Генерирую...';
-                fetch('/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description: desc, email: currentUser.email, user_password: localStorage.getItem('siteforge_pass') || '' }) })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.error) { status.textContent = '❌ ' + data.error; }
-                    else {
-                        if (!currentUser.is_superuser) { currentUser.generations_used++; localStorage.setItem('siteforge_user', JSON.stringify(currentUser)); }
-                        currentHtml = data.html; frame.style.display = 'block'; container.style.display = 'block'; frame.srcdoc = data.html;
-                        status.textContent = '✅ Готово!'; updateTopBar();
-                    }
-                })
-                .catch(e => { status.textContent = '❌ Ошибка: ' + e.message; })
-                .finally(() => { isGenerating = false; btn.disabled = false; spinner.style.display = 'none'; });
-            }
-            
-            function saveToGallery() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } const title = document.getElementById('desc').value || 'Без названия'; gallery.unshift({ title, html: currentHtml, date: new Date().toLocaleString() }); if (gallery.length > 50) gallery = gallery.slice(0, 50); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); alert('Сохранено!'); }
-            function renderGallery() { const list = document.getElementById('gallery-list'); const visible = gallery.slice(0, galleryVisible); list.innerHTML = visible.map((s, i) => `<div class="site-card" onclick="loadFromGallery(${i})"><div class="flex justify-between items-center"><div><span class="text-sm font-medium">${s.title}</span><span class="text-xs text-gray-500 ml-2">${s.date}</span></div><button onclick="event.stopPropagation(); deleteFromGallery(${i})" class="text-red-400 text-xs hover:text-red-300">Удалить</button></div></div>`).join(''); if (gallery.length > 4 && galleryVisible === 4) list.innerHTML += `<button onclick="showAll()" class="w-full text-center text-sm text-purple-400 hover:text-purple-300 py-2">Показать все (${gallery.length})</button>`; if (!gallery.length) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>'; }
-            function showAll() { galleryVisible = gallery.length; renderGallery(); }
-            function loadFromGallery(i) { const s = gallery[i]; currentHtml = s.html; document.getElementById('desc').value = s.title; const f = document.getElementById('preview-frame'); f.srcdoc = s.html; f.style.display = 'block'; document.getElementById('preview-container').style.display = 'block'; }
-            function deleteFromGallery(i) { if (confirm('Удалить?')) { gallery.splice(i, 1); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
-            function clearGallery() { if (confirm('Удалить ВСЁ?')) { gallery = []; localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
-            function toggleGallery() { const s = document.getElementById('gallery-section'), b = document.getElementById('gallery-toggle'); if (s.style.display === 'block') { s.style.display = 'none'; b.textContent = '📂 Сохранённые шаблоны'; } else { s.style.display = 'block'; b.textContent = '📂 Скрыть шаблоны'; galleryVisible = 4; renderGallery(); } }
-            function copyCode() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } navigator.clipboard.writeText(currentHtml).then(() => alert('Скопировано!')); }
-            function downloadHTML() { if (!currentHtml) { alert('Сначала создай шаблон!'); return; } const b = new Blob([currentHtml], {type: 'text/html'}); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = 'шаблон.html'; a.click(); URL.revokeObjectURL(u); }
-            function closePreview() { document.getElementById('preview-frame').style.display = 'none'; document.getElementById('preview-container').style.display = 'none'; currentHtml = ''; }
+            let currentHtml='',isGenerating=false,currentUser=JSON.parse(localStorage.getItem('siteforge_user')||'null'),gallery=JSON.parse(localStorage.getItem('siteforge_gallery')||'[]'),galleryVisible=4;
+            function updateTopBar(){const b=document.getElementById('balance-display'),a=document.getElementById('top-auth-link'),l=document.getElementById('top-avatar-link'),i=document.getElementById('avatar-icon'),e=document.getElementById('avatar-email');if(currentUser){const left=currentUser.is_superuser?'∞':Math.max(0,3-currentUser.generations_used);b.textContent='Баланс: '+left+' ген.';a.style.display='none';l.style.display='block';i.textContent=currentUser.email.charAt(0).toUpperCase();e.textContent=currentUser.email.split('@')[0]}else{b.textContent='';a.style.display='block';l.style.display='none'}}updateTopBar();
+            function generate(){if(isGenerating)return;if(!currentUser){document.getElementById('status').textContent='❌ Сначала войдите!';window.location.href='/auth';return}const d=document.getElementById('desc').value,s=document.getElementById('status'),f=document.getElementById('preview-frame'),c=document.getElementById('preview-container'),btn=document.getElementById('generateBtn'),sp=document.getElementById('spinner');if(!d){s.textContent='Введи описание!';return}if(!currentUser.is_superuser&&currentUser.generations_used>=3){s.textContent='🔒 Лимит исчерпан.';return}isGenerating=true;btn.disabled=true;sp.style.display='block';s.textContent='⚡ Генерирую...';fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({description:d,email:currentUser.email,user_password:localStorage.getItem('siteforge_pass')||''})}).then(r=>r.json()).then(data=>{if(data.error){s.textContent='❌ '+data.error}else{if(!currentUser.is_superuser){currentUser.generations_used++;localStorage.setItem('siteforge_user',JSON.stringify(currentUser))}currentHtml=data.html;f.style.display='block';c.style.display='block';f.srcdoc=data.html;s.textContent='✅ Готово!';updateTopBar()}}).catch(e=>{s.textContent='❌ Ошибка: '+e.message}).finally(()=>{isGenerating=false;btn.disabled=false;sp.style.display='none'})}
+            function saveToGallery(){if(!currentHtml){alert('Сначала создай шаблон!');return}gallery.unshift({title:document.getElementById('desc').value||'Без названия',html:currentHtml,date:new Date().toLocaleString()});if(gallery.length>50)gallery=gallery.slice(0,50);localStorage.setItem('siteforge_gallery',JSON.stringify(gallery));renderGallery();alert('Сохранено!')}
+            function renderGallery(){const list=document.getElementById('gallery-list'),visible=gallery.slice(0,galleryVisible);list.innerHTML=visible.map((s,i)=>`<div class="site-card" onclick="loadFromGallery(${i})"><div class="flex justify-between items-center"><div><span class="text-sm font-medium">${s.title}</span><span class="text-xs text-gray-500 ml-2">${s.date}</span></div><button onclick="event.stopPropagation();deleteFromGallery(${i})" class="text-red-400 text-xs">Удалить</button></div></div>`).join('');if(gallery.length>4&&galleryVisible===4)list.innerHTML+=`<button onclick="showAll()" class="w-full text-center text-sm text-purple-400 py-2">Показать все (${gallery.length})</button>`;if(!gallery.length)list.innerHTML='<p class="text-gray-500 text-sm text-center py-4">Пока пусто</p>'}
+            function showAll(){galleryVisible=gallery.length;renderGallery()}
+            function loadFromGallery(i){const s=gallery[i];currentHtml=s.html;document.getElementById('desc').value=s.title;const f=document.getElementById('preview-frame');f.srcdoc=s.html;f.style.display='block';document.getElementById('preview-container').style.display='block'}
+            function deleteFromGallery(i){if(confirm('Удалить?')){gallery.splice(i,1);localStorage.setItem('siteforge_gallery',JSON.stringify(gallery));renderGallery()}}
+            function clearGallery(){if(confirm('Удалить ВСЁ?')){gallery=[];localStorage.setItem('siteforge_gallery',JSON.stringify(gallery));renderGallery()}}
+            function toggleGallery(){const s=document.getElementById('gallery-section'),b=document.getElementById('gallery-toggle');if(s.style.display==='block'){s.style.display='none';b.textContent='📂 Сохранённые шаблоны'}else{s.style.display='block';b.textContent='📂 Скрыть шаблоны';galleryVisible=4;renderGallery()}}
+            function copyCode(){if(!currentHtml){alert('Сначала создай шаблон!');return}navigator.clipboard.writeText(currentHtml).then(()=>alert('Скопировано!'))}
+            function downloadHTML(){if(!currentHtml){alert('Сначала создай шаблон!');return}const b=new Blob([currentHtml],{type:'text/html'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='шаблон.html';a.click();URL.revokeObjectURL(u)}
+            function closePreview(){document.getElementById('preview-frame').style.display='none';document.getElementById('preview-container').style.display='none';currentHtml=''}
+            function openModal(t){document.getElementById(t+'-modal').classList.add('active')}
+            function closeModal(t){document.getElementById(t+'-modal').classList.remove('active')}
+            window.onclick=function(e){if(e.target.classList.contains('modal'))e.target.classList.remove('active')}
             renderGallery();
         </script>
     </body>
@@ -320,28 +297,21 @@ def profile_page():
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
-            .package-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 24px; text-align: center; transition: all 0.2s; }
-            .package-card:hover { border-color: #8b5cf6; background: rgba(139,92,246,0.08); }
-            .package-card.popular { border-color: #f59e0b; background: rgba(245,158,11,0.05); }
-            .btn-buy { background: #8b5cf6; color: white; padding: 10px 24px; border-radius: 10px; font-size: 14px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; opacity: 0.5; }
-            .btn-buy:hover { background: #7c3aed; }
-            .avatar-large { width: 64px; height: 64px; border-radius: 50%; background: #8b5cf6; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; margin: 0 auto; }
+            .package-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;text-align:center}
+            .package-card.popular{border-color:#f59e0b;background:rgba(245,158,11,0.05)}
+            .btn-buy{background:#8b5cf6;color:white;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:bold;border:none;opacity:0.5}
+            .avatar-large{width:64px;height:64px;border-radius:50%;background:#8b5cf6;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:bold;margin:0 auto}
         </style>
     </head>
     <body class="bg-gray-950 text-white min-h-screen">
         <div class="max-w-2xl w-full px-4 mx-auto py-6">
-            <a href="/" class="text-gray-400 hover:text-white transition text-sm">← Назад к генератору</a>
-            
-            <div id="profile-content" class="bg-gray-900 rounded-2xl p-8 border border-gray-800 mt-4">
-                <div id="profile-logged-out">
-                    <p class="text-center text-gray-400">Войдите, чтобы увидеть профиль.</p>
-                    <div class="text-center mt-4"><a href="/auth" class="text-purple-400 hover:underline text-sm">Войти</a></div>
-                </div>
-                <div id="profile-logged-in" style="display:none;">
-                    <div class="avatar-large mb-4" id="profile-avatar"></div>
-                    <h2 class="text-xl font-bold text-center mb-1" id="profile-email"></h2>
-                    <button onclick="logout()" class="text-red-400 hover:text-red-300 text-xs mt-2 block mx-auto mb-4">Выйти из аккаунта</button>
-                    <p class="text-center text-3xl font-bold mb-2" id="profile-balance"></p>
+            <a href="/" class="text-gray-400 hover:text-white text-sm">← Назад</a>
+            <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 mt-4">
+                <div id="plo"><p class="text-center text-gray-400">Войдите. <a href="/auth" class="text-purple-400">Войти</a></p></div>
+                <div id="pli" style="display:none;">
+                    <div class="avatar-large mb-4" id="pa"></div>
+                    <h2 class="text-xl font-bold text-center mb-1" id="pe"></h2>
+                    <p class="text-center text-3xl font-bold mb-2" id="pb"></p>
                     <div class="w-16 mx-auto border-b-2 border-purple-500 mb-6"></div>
                     <p class="text-center text-gray-400 text-sm mb-6">Пакеты генераций</p>
                     <div class="grid grid-cols-2 gap-3">
@@ -350,24 +320,14 @@ def profile_page():
                         <div class="package-card popular"><h3 class="text-lg font-bold">50 ген.</h3><p class="text-2xl font-bold my-2">600₽</p><button class="btn-buy" disabled>Скоро</button></div>
                         <div class="package-card"><h3 class="text-lg font-bold">100 ген.</h3><p class="text-2xl font-bold my-2">1000₽</p><button class="btn-buy" disabled>Скоро</button></div>
                     </div>
+                    <button onclick="logout()" class="fixed bottom-6 right-6 text-red-400 hover:text-red-300 text-sm bg-gray-800 px-3 py-1.5 rounded-lg">Выйти</button>
                 </div>
             </div>
         </div>
         <script>
-            const user = JSON.parse(localStorage.getItem('siteforge_user') || 'null');
-            if (user) {
-                document.getElementById('profile-logged-out').style.display = 'none';
-                document.getElementById('profile-logged-in').style.display = 'block';
-                document.getElementById('profile-avatar').textContent = user.email.charAt(0).toUpperCase();
-                document.getElementById('profile-email').textContent = user.email;
-                const left = user.is_superuser ? '∞' : Math.max(0, 3 - user.generations_used);
-                document.getElementById('profile-balance').textContent = left + ' ген.';
-            }
-            function logout() {
-                localStorage.removeItem('siteforge_user');
-                localStorage.removeItem('siteforge_pass');
-                window.location.href = '/';
-            }
+            const u=JSON.parse(localStorage.getItem('siteforge_user')||'null');
+            if(u){document.getElementById('plo').style.display='none';document.getElementById('pli').style.display='block';document.getElementById('pa').textContent=u.email.charAt(0).toUpperCase();document.getElementById('pe').textContent=u.email;document.getElementById('pb').textContent=(u.is_superuser?'∞':Math.max(0,3-u.generations_used))+' ген.'}
+            function logout(){localStorage.removeItem('siteforge_user');localStorage.removeItem('siteforge_pass');window.location.href='/'}
         </script>
     </body>
     </html>
@@ -384,69 +344,26 @@ def auth_page():
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
-            .input-field { width: 100%; padding: 14px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 15px; outline: none; margin-bottom: 16px; }
-            .input-field:focus { border-color: #8b5cf6; }
-            .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 14px; border-radius: 14px; font-weight: bold; cursor: pointer; border: none; width: 100%; }
-            .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99,102,241,0.4); }
+            .input-field{width:100%;padding:14px;border-radius:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;font-size:15px;outline:none;margin-bottom:16px}
+            .input-field:focus{border-color:#8b5cf6}
+            .btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:14px;border-radius:14px;font-weight:bold;border:none;width:100%}
         </style>
     </head>
     <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
         <div class="max-w-md w-full px-4 mx-auto py-12">
-            <a href="/" class="text-gray-400 hover:text-white transition text-sm">← Назад</a>
+            <a href="/" class="text-gray-400 hover:text-white text-sm">← Назад</a>
             <div class="text-center mb-8 mt-4"><div class="text-5xl mb-2">🚀</div><h1 class="text-2xl font-bold">Вход / Регистрация</h1></div>
             <div class="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10">
-                <div id="auth-form-login">
-                    <h3 class="text-sm font-bold mb-4">Вход</h3>
-                    <input id="login-email" type="email" placeholder="Email" class="input-field">
-                    <input id="login-password" type="password" placeholder="Пароль" class="input-field">
-                    <button onclick="login()" class="btn-primary mb-3">Войти</button>
-                    <p class="text-xs text-gray-400 text-center">Нет аккаунта? <a href="#" onclick="showRegister(); return false;" class="text-white font-bold hover:underline">Зарегистрироваться</a></p>
-                </div>
-                <div id="auth-form-register" style="display:none;">
-                    <h3 class="text-sm font-bold mb-4">Регистрация</h3>
-                    <input id="reg-email" type="email" placeholder="Email" class="input-field">
-                    <input id="reg-password" type="password" placeholder="Пароль" class="input-field">
-                    <input id="reg-password2" type="password" placeholder="Подтвердите пароль" class="input-field">
-                    <button onclick="register()" class="btn-primary mb-3">Зарегистрироваться</button>
-                    <p class="text-xs text-gray-400 text-center">Уже есть аккаунт? <a href="#" onclick="showLogin(); return false;" class="text-white font-bold hover:underline">Войти</a></p>
-                </div>
-                <p id="auth-status" class="mt-3 text-xs text-center text-gray-400"></p>
+                <div id="afl"><h3 class="text-sm font-bold mb-4">Вход</h3><input id="le" type="email" placeholder="Email" class="input-field"><input id="lp" type="password" placeholder="Пароль" class="input-field"><button onclick="login()" class="btn-primary mb-3">Войти</button><p class="text-xs text-gray-400 text-center">Нет аккаунта? <a href="#" onclick="showReg()" class="text-white font-bold hover:underline">Зарегистрироваться</a></p></div>
+                <div id="afr" style="display:none;"><h3 class="text-sm font-bold mb-4">Регистрация</h3><input id="re" type="email" placeholder="Email" class="input-field"><input id="rp" type="password" placeholder="Пароль" class="input-field"><input id="rp2" type="password" placeholder="Подтвердите пароль" class="input-field"><button onclick="register()" class="btn-primary mb-3">Зарегистрироваться</button><p class="text-xs text-gray-400 text-center">Уже есть аккаунт? <a href="#" onclick="showLog()" class="text-white font-bold hover:underline">Войти</a></p></div>
+                <p id="as" class="mt-3 text-xs text-center text-gray-400"></p>
             </div>
         </div>
         <script>
-            function showLogin() { document.getElementById('auth-form-login').style.display = 'block'; document.getElementById('auth-form-register').style.display = 'none'; document.getElementById('auth-status').textContent = ''; }
-            function showRegister() { document.getElementById('auth-form-login').style.display = 'none'; document.getElementById('auth-form-register').style.display = 'block'; document.getElementById('auth-status').textContent = ''; }
-            async function login() {
-                const email = document.getElementById('login-email').value;
-                const password = document.getElementById('login-password').value;
-                const status = document.getElementById('auth-status');
-                if (!email || !password) { status.textContent = 'Заполни все поля'; return; }
-                try {
-                    const res = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
-                    if (!res.ok) { const err = await res.json(); status.textContent = '❌ ' + err.detail; }
-                    else {
-                        const user = await res.json();
-                        localStorage.setItem('siteforge_user', JSON.stringify(user));
-                        localStorage.setItem('siteforge_pass', password);
-                        status.textContent = '✅ Вход выполнен!';
-                        setTimeout(() => { window.location.href = '/'; }, 1000);
-                    }
-                } catch(e) { status.textContent = '❌ Ошибка: ' + e.message; }
-            }
-            async function register() {
-                const email = document.getElementById('reg-email').value;
-                const password = document.getElementById('reg-password').value;
-                const password2 = document.getElementById('reg-password2').value;
-                const status = document.getElementById('auth-status');
-                if (!email || !password || !password2) { status.textContent = 'Заполни все поля'; return; }
-                if (password !== password2) { status.textContent = '❌ Пароли не совпадают'; return; }
-                if (password.length < 4) { status.textContent = '❌ Пароль должен быть не менее 4 символов'; return; }
-                try {
-                    const res = await fetch('/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
-                    if (!res.ok) { const err = await res.json(); status.textContent = '❌ ' + err.detail; }
-                    else { status.textContent = '✅ Регистрация успешна! Теперь войди.'; showLogin(); document.getElementById('login-email').value = email; }
-                } catch(e) { status.textContent = '❌ Ошибка: ' + e.message; }
-            }
+            function showLog(){document.getElementById('afl').style.display='block';document.getElementById('afr').style.display='none';document.getElementById('as').textContent=''}
+            function showReg(){document.getElementById('afl').style.display='none';document.getElementById('afr').style.display='block';document.getElementById('as').textContent=''}
+            async function login(){const e=document.getElementById('le').value,p=document.getElementById('lp').value,s=document.getElementById('as');if(!e||!p){s.textContent='Заполни все поля';return}try{const r=await fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})});if(!r.ok){const d=await r.json();s.textContent='❌ '+d.detail}else{const u=await r.json();localStorage.setItem('siteforge_user',JSON.stringify(u));localStorage.setItem('siteforge_pass',p);s.textContent='✅ Вход!';setTimeout(()=>{window.location.href='/'},1000)}}catch(e){s.textContent='❌ Ошибка: '+e.message}}
+            async function register(){const e=document.getElementById('re').value,p=document.getElementById('rp').value,p2=document.getElementById('rp2').value,s=document.getElementById('as');if(!e||!p||!p2){s.textContent='Заполни все поля';return}if(p!==p2){s.textContent='❌ Пароли не совпадают';return}if(p.length<4){s.textContent='❌ Пароль от 4 символов';return}try{const r=await fetch('/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})});if(!r.ok){const d=await r.json();s.textContent='❌ '+d.detail}else{s.textContent='✅ Регистрация! Проверьте почту для подтверждения.';showLog();document.getElementById('le').value=e}}catch(e){s.textContent='❌ Ошибка: '+e.message}}
         </script>
     </body>
     </html>
