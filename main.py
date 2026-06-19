@@ -143,7 +143,7 @@ def generate_site(req: SiteRequest):
             "content": (
                 "Ты генератор HTML-шаблонов. Создай КРАСИВЫЙ адаптивный HTML-шаблон с Tailwind CSS (CDN). "
                 "Базовые секции, placeholder.com для картинок, неактивные ссылки. "
-                "Заголовки должны помещаться в одну строку, не обрезаться. Используй перенос слов: word-wrap: break-word. "
+                "Заголовки должны помещаться в одну строку, не обрезаться. Используй word-wrap: break-word; overflow-wrap: anywhere. "
                 "Градиенты, тени, анимации. Отвечай ТОЛЬКО HTML в ```html ...```."
             )
         }, {"role": "user", "content": f"Создай шаблон: {req.description}"}],
@@ -156,7 +156,7 @@ def generate_site(req: SiteRequest):
     html = re.sub(r'(<a\b[^>]*?)href="[^"]*"', r'\1href="#"', html)
     html = re.sub(r"(<a\b[^>]*?)href='[^']*'", r"\1href='#'", html)
     html = re.sub(r'action="[^"]*"', 'action="#"', html)
-    html = html.replace('</head>', '<style>body{max-width:100vw!important;overflow-x:hidden!important}a{text-decoration:none!important;pointer-events:none;cursor:default;color:inherit}</style></head>')
+    html = html.replace('</head>', '<style>body{max-width:100vw!important;overflow-x:hidden!important}a{text-decoration:none!important;pointer-events:none;cursor:default;color:inherit}*{word-wrap:break-word!important;overflow-wrap:anywhere!important}</style></head>')
 
     if not user["is_superuser"]:
         conn = get_db()
@@ -174,7 +174,7 @@ def view_site():
     return last_site["html"]
 
 @app.get("/", response_class=HTMLResponse)
-def home(* { word-wrap: break-word; overflow-wrap: anywhere; }):
+def home():
     return """
     <!DOCTYPE html>
     <html lang="ru">
@@ -185,6 +185,7 @@ def home(* { word-wrap: break-word; overflow-wrap: anywhere; }):
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
+            * { word-wrap: break-word; overflow-wrap: anywhere; }
             #preview-frame { width: 100%; height: 70vh; border: none; border-radius: 12px; display: none; background: transparent; }
             #preview-container { display: none; margin-top: 20px; animation: fadeIn 0.3s ease; }
             @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -362,7 +363,7 @@ def home(* { word-wrap: break-word; overflow-wrap: anywhere; }):
                     <div class="site-card" onclick="loadFromGallery(${i})">
                         <div class="flex justify-between items-center">
                             <div style="max-width: 70%;">
-                                <span class="text-sm font-medium" style="word-wrap: break-word; overflow-wrap: break-word;">${s.title}</span>
+                                <span class="text-sm font-medium" style="word-wrap: break-word; overflow-wrap: anywhere;">${s.title}</span>
                                 <span class="text-xs text-gray-500 ml-2">${s.date}</span>
                             </div>
                             <button onclick="event.stopPropagation(); deleteFromGallery(${i})" class="text-red-400 text-xs hover:text-red-300">Удалить</button>
