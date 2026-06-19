@@ -174,7 +174,7 @@ def view_site():
     return last_site["html"]
 
 @app.get("/", response_class=HTMLResponse)
-def home():
+def home(* { word-wrap: break-word; overflow-wrap: anywhere; }):
     return """
     <!DOCTYPE html>
     <html lang="ru">
@@ -441,17 +441,17 @@ def profile_page():
                         <div class="package-card popular"><h3 class="text-lg font-bold">30 ген.</h3><p class="text-2xl font-bold my-2">400₽</p><button class="btn-buy" disabled>Скоро</button></div>
                         <div class="package-card"><h3 class="text-lg font-bold">50 ген.</h3><p class="text-2xl font-bold my-2">600₽</p><button class="btn-buy" disabled>Скоро</button></div>
                     </div>
-                    <div class="text-center mt-6">
-                        <button onclick="showChangePassword()" class="text-yellow-400 hover:text-yellow-300 text-sm">Сменить пароль</button>
-                        <div id="change-pwd-form" style="display:none; margin-top: 10px;">
-                            <input id="old-pwd" type="password" placeholder="Старый пароль" class="input-field">
-                            <input id="new-pwd" type="password" placeholder="Новый пароль" class="input-field">
-                            <input id="confirm-pwd" type="password" placeholder="Подтвердите новый пароль" class="input-field">
-                            <button onclick="changePassword()" class="btn-sm">Сохранить</button>
-                            <p id="pwd-status" class="text-xs text-gray-400 mt-2"></p>
+                    <div class="mt-6 flex justify-between items-end">
+                        <div>
+                            <button onclick="toggleChangePassword()" id="pwd-toggle-btn" class="text-red-400 hover:text-red-300 text-sm">Сменить пароль</button>
+                            <div id="change-pwd-form" style="display:none; margin-top: 10px;">
+                                <input id="old-pwd" type="password" placeholder="Старый пароль" class="input-field">
+                                <input id="new-pwd" type="password" placeholder="Новый пароль" class="input-field">
+                                <input id="confirm-pwd" type="password" placeholder="Подтвердите новый пароль" class="input-field">
+                                <button onclick="changePassword()" class="btn-sm">Сохранить</button>
+                                <p id="pwd-status" class="text-xs text-gray-400 mt-2"></p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="text-right mt-6">
                         <button onclick="logout()" class="text-red-400 hover:text-red-300 text-sm">Выйти из аккаунта</button>
                     </div>
                 </div>
@@ -466,7 +466,17 @@ def profile_page():
                 document.getElementById('pe').textContent = u.email;
                 document.getElementById('pb').textContent = (u.is_superuser ? '∞' : Math.max(0, 3 - u.generations_used)) + ' ген.';
             }
-            function showChangePassword() { document.getElementById('change-pwd-form').style.display = 'block'; }
+            function toggleChangePassword() {
+                const form = document.getElementById('change-pwd-form');
+                const btn = document.getElementById('pwd-toggle-btn');
+                if (form.style.display === 'block') {
+                    form.style.display = 'none';
+                    btn.textContent = 'Сменить пароль';
+                } else {
+                    form.style.display = 'block';
+                    btn.textContent = 'Сменить пароль ▲';
+                }
+            }
             async function changePassword() {
                 const oldPwd = document.getElementById('old-pwd').value;
                 const newPwd = document.getElementById('new-pwd').value;
