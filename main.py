@@ -18,6 +18,8 @@ client = OpenAI(
 
 app = FastAPI()
 
+LOGO_URL = "https://raw.githubusercontent.com/dimkavihrov-lab/ai-site-builder-public/main/black%20minimalist%20home%20logo.png"
+
 def get_db():
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
@@ -192,7 +194,7 @@ def view_site():
 
 @app.get("/", response_class=HTMLResponse)
 def home():
-    return """
+    return f"""
     <!DOCTYPE html>
     <html lang="ru">
     <head>
@@ -202,38 +204,38 @@ def home():
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='#6d28d9'/><text x='50' y='68' font-size='52' font-weight='bold' fill='white' text-anchor='middle' font-family='Arial'>SF</text></svg>">
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
-            * { word-wrap: break-word; overflow-wrap: anywhere; }
-            body { min-height: 100vh; }
-            #preview-frame { width: 100%; height: 65vh; border: none; border-radius: 12px; display: none; background: transparent; }
-            #preview-container { display: none; margin-top: 16px; animation: fadeIn 0.3s ease; }
-            @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-            @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-            .spinner { animation: spin 1s linear infinite; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #8b5cf6; border-radius: 50%; display: none; margin: 10px auto; }
-            .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 14px; border-radius: 14px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; text-align: center; width: 100%; }
-            .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99,102,241,0.4); }
-            .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-            .input-field { width: 100%; padding: 14px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 15px; outline: none; margin-bottom: 14px; }
-            .input-field:focus { border-color: #8b5cf6; box-shadow: 0 0 0 2px rgba(139,92,246,0.3); }
-            .site-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 14px; margin-bottom: 8px; cursor: pointer; }
-            .site-card:hover { background: rgba(255,255,255,0.06); }
-            .avatar { width: 32px; height: 32px; border-radius: 50%; background: #8b5cf6; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; cursor: pointer; }
-            .top-avatar-wrapper { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 4px 10px 4px 4px; }
-            .top-email { font-size: 12px; color: #9ca3af; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-            .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; }
-            .modal.active { display: flex; }
-            .modal-content { background: #0f0d2e; border-radius: 16px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); color: #d1d5db; }
-            .edit-btn { color: #60a5fa; text-decoration: none; font-size: 13px; cursor: pointer; background: none; border: none; }
-            .edit-btn:hover { color: #93c5fd; text-decoration: none; }
-            .dropdown-menu { position: relative; display: inline-block; }
-            .dropdown-content { display: none; position: absolute; left: 50%; transform: translateX(-50%); background: #1e1b4b; border-radius: 12px; padding: 6px; min-width: 200px; z-index: 200; border: 1px solid rgba(255,255,255,0.15); margin-top: 4px; max-height: 250px; overflow-y: auto; }
-            .dropdown-menu.active .dropdown-content { display: block; }
-            .dropdown-option { display: block; width: 100%; padding: 10px 14px; text-align: left; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: #d1d5db; font-size: 13px; cursor: pointer; border-radius: 8px; margin-bottom: 3px; transition: all 0.15s; }
-            .dropdown-option:hover { background: rgba(139,92,246,0.2); color: white; border-color: #8b5cf6; }
-            .black minimalist home logo-img { height: 48px; border-radius: 12px; margin-bottom: 8px; }
-            @media (min-width: 768px) {
-                .max-w-2xl { max-width: 800px !important; }
-                #preview-frame { height: 70vh; }
-            }
+            * {{ word-wrap: break-word; overflow-wrap: anywhere; }}
+            body {{ min-height: 100vh; }}
+            #preview-frame {{ width: 100%; height: 65vh; border: none; border-radius: 12px; display: none; background: transparent; }}
+            #preview-container {{ display: none; margin-top: 16px; animation: fadeIn 0.3s ease; }}
+            @keyframes fadeIn {{ from {{ opacity: 0; transform: translateY(10px); }} to {{ opacity: 1; transform: translateY(0); }} }}
+            @keyframes spin {{ from {{ transform: rotate(0deg); }} to {{ transform: rotate(360deg); }} }}
+            .spinner {{ animation: spin 1s linear infinite; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #8b5cf6; border-radius: 50%; display: none; margin: 10px auto; }}
+            .btn-primary {{ background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 14px; border-radius: 14px; font-weight: bold; cursor: pointer; border: none; transition: all 0.2s; text-align: center; width: 100%; }}
+            .btn-primary:hover:not(:disabled) {{ transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99,102,241,0.4); }}
+            .btn-primary:disabled {{ opacity: 0.5; cursor: not-allowed; }}
+            .input-field {{ width: 100%; padding: 14px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 15px; outline: none; margin-bottom: 14px; }}
+            .input-field:focus {{ border-color: #8b5cf6; box-shadow: 0 0 0 2px rgba(139,92,246,0.3); }}
+            .site-card {{ background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 14px; margin-bottom: 8px; cursor: pointer; }}
+            .site-card:hover {{ background: rgba(255,255,255,0.06); }}
+            .avatar {{ width: 32px; height: 32px; border-radius: 50%; background: #8b5cf6; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; cursor: pointer; }}
+            .top-avatar-wrapper {{ display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 4px 10px 4px 4px; }}
+            .top-email {{ font-size: 12px; color: #9ca3af; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+            .modal {{ display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; }}
+            .modal.active {{ display: flex; }}
+            .modal-content {{ background: #0f0d2e; border-radius: 16px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); color: #d1d5db; }}
+            .edit-btn {{ color: #60a5fa; text-decoration: none; font-size: 13px; cursor: pointer; background: none; border: none; }}
+            .edit-btn:hover {{ color: #93c5fd; text-decoration: none; }}
+            .dropdown-menu {{ position: relative; display: inline-block; }}
+            .dropdown-content {{ display: none; position: absolute; left: 50%; transform: translateX(-50%); background: #1e1b4b; border-radius: 12px; padding: 6px; min-width: 200px; z-index: 200; border: 1px solid rgba(255,255,255,0.15); margin-top: 4px; max-height: 250px; overflow-y: auto; }}
+            .dropdown-menu.active .dropdown-content {{ display: block; }}
+            .dropdown-option {{ display: block; width: 100%; padding: 10px 14px; text-align: left; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: #d1d5db; font-size: 13px; cursor: pointer; border-radius: 8px; margin-bottom: 3px; transition: all 0.15s; }}
+            .dropdown-option:hover {{ background: rgba(139,92,246,0.2); color: white; border-color: #8b5cf6; }}
+            .logo-img {{ height: 48px; border-radius: 12px; margin-bottom: 8px; }}
+            @media (min-width: 768px) {{
+                .max-w-2xl {{ max-width: 800px !important; }}
+                #preview-frame {{ height: 70vh; }}
+            }}
         </style>
     </head>
     <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white">
@@ -253,7 +255,7 @@ def home():
             </div>
             
             <div class="text-center mb-6">
-                <img src="/static/black minimalist home logo.png" alt="SiteForge" class="logo-img" onerror="this.style.display='none'">
+                <img src="{LOGO_URL}" alt="SiteForge" class="logo-img" onerror="this.style.display='none'">
                 <h1 class="text-4xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">SiteForge</h1>
                 <p class="text-gray-400 mt-2 text-sm">Создайте HTML-шаблон за секунды</p>
             </div>
@@ -305,59 +307,59 @@ def home():
             let galleryVisible = 4;
             const FREE_LIMIT = 3;
             
-            function updateTopBar() {
+            function updateTopBar() {{
                 const b = document.getElementById('balance-display'), a = document.getElementById('top-auth-link'), l = document.getElementById('top-avatar-link'), i = document.getElementById('avatar-icon'), e = document.getElementById('avatar-email');
-                if (currentUser) {
+                if (currentUser) {{
                     const left = currentUser.is_superuser ? '∞' : Math.max(0, FREE_LIMIT - currentUser.generations_used);
                     b.textContent = 'Баланс: ' + left + ' ген.'; a.style.display = 'none'; l.style.display = 'block';
                     i.textContent = currentUser.email.charAt(0).toUpperCase(); e.textContent = currentUser.email.split('@')[0];
-                } else { b.textContent = ''; a.style.display = 'block'; l.style.display = 'none'; }
-            }
+                }} else {{ b.textContent = ''; a.style.display = 'block'; l.style.display = 'none'; }}
+            }}
             updateTopBar();
             
-            function generate() {
+            function generate() {{
                 if (isGenerating) return;
-                if (!currentUser) { document.getElementById('status').textContent = '❌ Сначала войдите!'; window.location.href = '/auth'; return; }
+                if (!currentUser) {{ document.getElementById('status').textContent = '❌ Сначала войдите!'; window.location.href = '/auth'; return; }}
                 const d = document.getElementById('desc').value, s = document.getElementById('status'), f = document.getElementById('preview-frame'), c = document.getElementById('preview-container'), btn = document.getElementById('generateBtn'), sp = document.getElementById('spinner');
-                if (!d) { s.textContent = 'Введите описание!'; return; }
-                if (!currentUser.is_superuser && currentUser.generations_used >= FREE_LIMIT) { s.textContent = '🔒 Лимит исчерпан. Приобретите пакет в профиле!'; return; }
+                if (!d) {{ s.textContent = 'Введите описание!'; return; }}
+                if (!currentUser.is_superuser && currentUser.generations_used >= FREE_LIMIT) {{ s.textContent = '🔒 Лимит исчерпан. Приобретите пакет в профиле!'; return; }}
                 isGenerating = true; btn.disabled = true; sp.style.display = 'block'; s.textContent = '⚡ Генерируем...';
-                fetch('/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ description: d, email: currentUser.email, user_password: localStorage.getItem('siteforge_pass') || '' }) })
-                .then(r => r.json()).then(data => {
-                    if (data.error) { s.textContent = '❌ ' + data.error; }
-                    else {
-                        if (!currentUser.is_superuser) { currentUser.generations_used++; localStorage.setItem('siteforge_user', JSON.stringify(currentUser)); }
+                fetch('/generate', {{ method: 'POST', headers: {{ 'Content-Type': 'application/json' }}, body: JSON.stringify({{ description: d, email: currentUser.email, user_password: localStorage.getItem('siteforge_pass') || '' }}) }})
+                .then(r => r.json()).then(data => {{
+                    if (data.error) {{ s.textContent = '❌ ' + data.error; }}
+                    else {{
+                        if (!currentUser.is_superuser) {{ currentUser.generations_used++; localStorage.setItem('siteforge_user', JSON.stringify(currentUser)); }}
                         currentHtml = data.html; f.style.display = 'block'; c.style.display = 'block'; f.srcdoc = data.html;
                         s.textContent = '✅ Готово!'; updateTopBar();
                         gallery = JSON.parse(localStorage.getItem('siteforge_gallery') || '[]');
-                        gallery.unshift({ title: d, html: currentHtml, date: new Date().toLocaleString() });
+                        gallery.unshift({{ title: d, html: currentHtml, date: new Date().toLocaleString() }});
                         if (gallery.length > 50) gallery = gallery.slice(0, 50);
                         localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
-                        setTimeout(() => { enableEditInFrame(); }, 500);
-                    }
-                }).catch(e => { s.textContent = '❌ Ошибка: ' + e.message; }).finally(() => { isGenerating = false; btn.disabled = false; sp.style.display = 'none'; });
-            }
+                        setTimeout(() => {{ enableEditInFrame(); }}, 500);
+                    }}
+                }}).catch(e => {{ s.textContent = '❌ Ошибка: ' + e.message; }}).finally(() => {{ isGenerating = false; btn.disabled = false; sp.style.display = 'none'; }});
+            }}
             
-            function toggleEditMode() {
+            function toggleEditMode() {{
                 editMode = !editMode;
                 const btn = document.getElementById('edit-mode-btn');
                 btn.textContent = editMode ? '✏️ Редактирование ВКЛ' : '✏️ Редактировать текст';
                 btn.className = editMode ? 'edit-btn font-bold' : 'edit-btn';
                 enableEditInFrame();
-            }
+            }}
             
-            function enableEditInFrame() {
+            function enableEditInFrame() {{
                 const frame = document.getElementById('preview-frame');
                 if (!frame.srcdoc || frame.srcdoc === '') return;
-                try {
+                try {{
                     const doc = frame.contentDocument || frame.contentWindow.document;
                     if (!doc) return;
                     const texts = doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, li, a, button, td, th, div, label');
-                    texts.forEach(el => {
-                        if (el.children.length === 0 && el.textContent.trim().length > 0) {
-                            if (editMode) {
+                    texts.forEach(el => {{
+                        if (el.children.length === 0 && el.textContent.trim().length > 0) {{
+                            if (editMode) {{
                                 el.style.cursor = 'text'; el.style.outline = '1px dashed rgba(139,92,246,0.3)';
-                                el.onclick = function(e) {
+                                el.onclick = function(e) {{
                                     e.preventDefault(); e.stopPropagation();
                                     const old = el.textContent;
                                     const input = doc.createElement('input');
@@ -365,47 +367,47 @@ def home():
                                     input.style.border = '2px solid #8b5cf6'; input.style.borderRadius = '4px';
                                     input.style.fontSize = window.getComputedStyle(el).fontSize;
                                     el.textContent = ''; el.appendChild(input); input.focus();
-                                    input.onblur = function() { el.textContent = input.value; currentHtml = currentHtml.replace(old, input.value); };
-                                    input.onkeydown = function(ev) { if (ev.key === 'Enter') input.blur(); };
-                                };
-                            } else { el.style.cursor = 'default'; el.style.outline = 'none'; el.onclick = null; }
-                        }
-                    });
-                } catch(e) {}
-            }
+                                    input.onblur = function() {{ el.textContent = input.value; currentHtml = currentHtml.replace(old, input.value); }};
+                                    input.onkeydown = function(ev) {{ if (ev.key === 'Enter') input.blur(); }};
+                                }};
+                            }} else {{ el.style.cursor = 'default'; el.style.outline = 'none'; el.onclick = null; }}
+                        }}
+                    }});
+                }} catch(e) {{}}
+            }}
             
-            function renderGallery() {
+            function renderGallery() {{
                 const list = document.getElementById('gallery-list');
                 const visible = gallery.slice(0, galleryVisible);
-                list.innerHTML = visible.map((s, i) => `<div class="site-card" onclick="loadFromGallery(${i})"><div class="flex justify-between items-center"><div style="max-width:70%"><span class="text-sm font-medium" style="word-wrap:break-word">${s.title}</span><span class="text-xs text-gray-500 ml-2">${s.date}</span></div><button onclick="event.stopPropagation();deleteFromGallery(${i})" class="text-red-400 text-xs">Удалить</button></div></div>`).join('');
-                if (gallery.length > 4 && galleryVisible === 4) list.innerHTML += `<button onclick="showAll()" class="w-full text-center text-sm text-purple-400 py-2">Показать все (${gallery.length})</button>`;
+                list.innerHTML = visible.map((s, i) => `<div class="site-card" onclick="loadFromGallery(${{i}})"><div class="flex justify-between items-center"><div style="max-width:70%"><span class="text-sm font-medium" style="word-wrap:break-word">${{s.title}}</span><span class="text-xs text-gray-500 ml-2">${{s.date}}</span></div><button onclick="event.stopPropagation();deleteFromGallery(${{i}})" class="text-red-400 text-xs">Удалить</button></div></div>`).join('');
+                if (gallery.length > 4 && galleryVisible === 4) list.innerHTML += `<button onclick="showAll()" class="w-full text-center text-sm text-purple-400 py-2">Показать все (${{gallery.length}})</button>`;
                 if (!gallery.length) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто.</p>';
-            }
+            }}
             
-            function showAll() { galleryVisible = gallery.length; renderGallery(); }
-            function loadFromGallery(i) { const s = gallery[i]; currentHtml = s.html; document.getElementById('desc').value = s.title; const f = document.getElementById('preview-frame'); f.srcdoc = s.html; f.style.display = 'block'; document.getElementById('preview-container').style.display = 'block'; }
-            function deleteFromGallery(i) { if (confirm('Удалить?')) { gallery.splice(i, 1); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
-            function clearGallery() { if (confirm('Удалить ВСЁ?')) { gallery = []; localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
-            function toggleGallery() { const s = document.getElementById('gallery-section'), b = document.getElementById('gallery-toggle'); if (s.style.display === 'block') { s.style.display = 'none'; b.textContent = '📂 Сохранённые шаблоны'; } else { s.style.display = 'block'; b.textContent = '📂 Скрыть шаблоны'; galleryVisible = 4; renderGallery(); } }
-            function toggleMenu(id) {
+            function showAll() {{ galleryVisible = gallery.length; renderGallery(); }}
+            function loadFromGallery(i) {{ const s = gallery[i]; currentHtml = s.html; document.getElementById('desc').value = s.title; const f = document.getElementById('preview-frame'); f.srcdoc = s.html; f.style.display = 'block'; document.getElementById('preview-container').style.display = 'block'; }}
+            function deleteFromGallery(i) {{ if (confirm('Удалить?')) {{ gallery.splice(i, 1); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); }} }}
+            function clearGallery() {{ if (confirm('Удалить ВСЁ?')) {{ gallery = []; localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); }} }}
+            function toggleGallery() {{ const s = document.getElementById('gallery-section'), b = document.getElementById('gallery-toggle'); if (s.style.display === 'block') {{ s.style.display = 'none'; b.textContent = '📂 Сохранённые шаблоны'; }} else {{ s.style.display = 'block'; b.textContent = '📂 Скрыть шаблоны'; galleryVisible = 4; renderGallery(); }} }}
+            function toggleMenu(id) {{
                 const menu = document.getElementById(id);
                 const content = menu.querySelector('.dropdown-content');
                 const rect = menu.getBoundingClientRect();
-                if (window.innerHeight - rect.bottom < 260 && rect.top > 260) {
+                if (window.innerHeight - rect.bottom < 260 && rect.top > 260) {{
                     content.style.bottom = '100%'; content.style.top = 'auto'; content.style.marginTop = '0'; content.style.marginBottom = '8px';
-                } else {
+                }} else {{
                     content.style.bottom = 'auto'; content.style.top = '100%'; content.style.marginTop = '4px'; content.style.marginBottom = '0';
-                }
+                }}
                 menu.classList.toggle('active');
-            }
-            function copyCode(mode) { if (!currentHtml) { alert('Сначала создайте шаблон!'); return; } let t = ''; if (mode === 'full') t = currentHtml; else if (mode === 'body') { const m = currentHtml.match(/<body[^>]*>([\\s\\S]*)<\\/body>/i); t = m ? m[1] : currentHtml; } else if (mode === 'css') { const m = currentHtml.match(/<style[^>]*>([\\s\\S]*)<\\/style>/i); t = m ? m[1] : '/* нет */'; } navigator.clipboard.writeText(t.trim()).then(() => { alert('Скопировано!'); toggleMenu('copyMenu'); }); }
-            function downloadHTML() { if (!currentHtml) { alert('Сначала создайте шаблон!'); return; } const b = new Blob([currentHtml], {type: 'text/html'}), u = URL.createObjectURL(b), a = document.createElement('a'); a.href = u; a.download = 'шаблон.html'; a.click(); URL.revokeObjectURL(u); toggleMenu('copyMenu'); }
-            function openInCodepen() { if (!currentHtml) { alert('Сначала создайте шаблон!'); return; } const f = document.createElement('form'); f.method = 'POST'; f.action = 'https://codepen.io/pen/define'; f.target = '_blank'; const i = document.createElement('input'); i.type = 'hidden'; i.name = 'data'; i.value = JSON.stringify({ title: 'SiteForge Template', html: currentHtml, css: '', js: '' }); f.appendChild(i); document.body.appendChild(f); f.submit(); document.body.removeChild(f); toggleMenu('openMenu'); }
-            function openInWordpress() { if (!currentHtml) { alert('Сначала создайте шаблон!'); return; } navigator.clipboard.writeText(currentHtml); alert('HTML скопирован! Вставьте его в редактор WordPress (блок "HTML-код").'); toggleMenu('openMenu'); }
-            function closePreview() { document.getElementById('preview-frame').style.display = 'none'; document.getElementById('preview-container').style.display = 'none'; currentHtml = ''; editMode = false; document.getElementById('edit-mode-btn').textContent = '✏️ Редактировать текст'; }
-            function openModal(t) { document.getElementById(t + '-modal').classList.add('active'); }
-            function closeModal(t) { document.getElementById(t + '-modal').classList.remove('active'); }
-            window.onclick = function(e) { if (e.target.classList.contains('modal')) e.target.classList.remove('active'); if (!e.target.closest('.dropdown-menu')) { document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.remove('active')); } }
+            }}
+            function copyCode(mode) {{ if (!currentHtml) {{ alert('Сначала создайте шаблон!'); return; }} let t = ''; if (mode === 'full') t = currentHtml; else if (mode === 'body') {{ const m = currentHtml.match(/<body[^>]*>([\\s\\S]*)<\\/body>/i); t = m ? m[1] : currentHtml; }} else if (mode === 'css') {{ const m = currentHtml.match(/<style[^>]*>([\\s\\S]*)<\\/style>/i); t = m ? m[1] : '/* нет */'; }} navigator.clipboard.writeText(t.trim()).then(() => {{ alert('Скопировано!'); toggleMenu('copyMenu'); }}); }}
+            function downloadHTML() {{ if (!currentHtml) {{ alert('Сначала создайте шаблон!'); return; }} const b = new Blob([currentHtml], {{type: 'text/html'}}), u = URL.createObjectURL(b), a = document.createElement('a'); a.href = u; a.download = 'шаблон.html'; a.click(); URL.revokeObjectURL(u); toggleMenu('copyMenu'); }}
+            function openInCodepen() {{ if (!currentHtml) {{ alert('Сначала создайте шаблон!'); return; }} const f = document.createElement('form'); f.method = 'POST'; f.action = 'https://codepen.io/pen/define'; f.target = '_blank'; const i = document.createElement('input'); i.type = 'hidden'; i.name = 'data'; i.value = JSON.stringify({{ title: 'SiteForge Template', html: currentHtml, css: '', js: '' }}); f.appendChild(i); document.body.appendChild(f); f.submit(); document.body.removeChild(f); toggleMenu('openMenu'); }}
+            function openInWordpress() {{ if (!currentHtml) {{ alert('Сначала создайте шаблон!'); return; }} navigator.clipboard.writeText(currentHtml); alert('HTML скопирован! Вставьте его в редактор WordPress (блок "HTML-код").'); toggleMenu('openMenu'); }}
+            function closePreview() {{ document.getElementById('preview-frame').style.display = 'none'; document.getElementById('preview-container').style.display = 'none'; currentHtml = ''; editMode = false; document.getElementById('edit-mode-btn').textContent = '✏️ Редактировать текст'; }}
+            function openModal(t) {{ document.getElementById(t + '-modal').classList.add('active'); }}
+            function closeModal(t) {{ document.getElementById(t + '-modal').classList.remove('active'); }}
+            window.onclick = function(e) {{ if (e.target.classList.contains('modal')) e.target.classList.remove('active'); if (!e.target.closest('.dropdown-menu')) {{ document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.remove('active')); }} }}
             renderGallery();
         </script>
     </body>
@@ -414,7 +416,7 @@ def home():
 
 @app.get("/profile", response_class=HTMLResponse)
 def profile_page():
-    return """
+    return f"""
     <!DOCTYPE html>
     <html lang="ru">
     <head>
@@ -423,12 +425,12 @@ def profile_page():
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='#6d28d9'/><text x='50' y='68' font-size='52' font-weight='bold' fill='white' text-anchor='middle' font-family='Arial'>SF</text></svg>">
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
-            .package-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;text-align:center}
-            .package-card.popular{border-color:#f59e0b;background:rgba(245,158,11,0.05)}
-            .btn-buy{background:#8b5cf6;color:white;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:bold;border:none;opacity:0.5}
-            .avatar-large{width:64px;height:64px;border-radius:50%;background:#8b5cf6;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:bold;margin:0 auto}
-            .input-field{width:100%;padding:10px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;font-size:14px;outline:none;margin-bottom:8px}
-            .btn-sm{background:#8b5cf6;color:white;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:bold;border:none;cursor:pointer}
+            .package-card{{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;text-align:center}}
+            .package-card.popular{{border-color:#f59e0b;background:rgba(245,158,11,0.05)}}
+            .btn-buy{{background:#8b5cf6;color:white;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:bold;border:none;opacity:0.5}}
+            .avatar-large{{width:64px;height:64px;border-radius:50%;background:#8b5cf6;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:bold;margin:0 auto}}
+            .input-field{{width:100%;padding:10px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;font-size:14px;outline:none;margin-bottom:8px}}
+            .btn-sm{{background:#8b5cf6;color:white;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:bold;border:none;cursor:pointer}}
         </style>
     </head>
     <body class="bg-gray-950 text-white min-h-screen">
@@ -467,34 +469,34 @@ def profile_page():
         </div>
         <script>
             const u = JSON.parse(localStorage.getItem('siteforge_user') || 'null');
-            if (u) {
+            if (u) {{
                 document.getElementById('plo').style.display = 'none';
                 document.getElementById('pli').style.display = 'block';
                 document.getElementById('pa').textContent = u.email.charAt(0).toUpperCase();
                 document.getElementById('pe').textContent = u.email;
                 document.getElementById('pb').textContent = (u.is_superuser ? '∞' : Math.max(0, 3 - u.generations_used)) + ' ген.';
-                fetch('/stats').then(r => r.json()).then(d => {
+                fetch('/stats').then(r => r.json()).then(d => {{
                     document.getElementById('stats-line').textContent = '👥 Всего пользователей: ' + d.total_users + ' | За 24 часа: ' + d.today_users;
-                });
-            }
-            function toggleChangePassword() {
+                }});
+            }}
+            function toggleChangePassword() {{
                 const f = document.getElementById('change-pwd-form'), b = document.getElementById('pwd-toggle-btn');
-                if (f.style.display === 'block') { f.style.display = 'none'; b.textContent = 'Сменить пароль'; }
-                else { f.style.display = 'block'; b.textContent = 'Сменить пароль ▲'; }
-            }
-            async function changePassword() {
+                if (f.style.display === 'block') {{ f.style.display = 'none'; b.textContent = 'Сменить пароль'; }}
+                else {{ f.style.display = 'block'; b.textContent = 'Сменить пароль ▲'; }}
+            }}
+            async function changePassword() {{
                 const o = document.getElementById('old-pwd').value, n = document.getElementById('new-pwd').value, c = document.getElementById('confirm-pwd').value, s = document.getElementById('pwd-status');
-                if (!o || !n || !c) { s.textContent = 'Заполните все поля'; return; }
-                if (n !== c) { s.textContent = '❌ Новые пароли не совпадают'; return; }
-                if (n.length < 4) { s.textContent = '❌ Пароль от 4 символов'; return; }
-                try {
-                    const r = await fetch('/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: u.email, old_password: o, new_password: n }) });
+                if (!o || !n || !c) {{ s.textContent = 'Заполните все поля'; return; }}
+                if (n !== c) {{ s.textContent = '❌ Новые пароли не совпадают'; return; }}
+                if (n.length < 4) {{ s.textContent = '❌ Пароль от 4 символов'; return; }}
+                try {{
+                    const r = await fetch('/change-password', {{ method: 'POST', headers: {{ 'Content-Type': 'application/json' }}, body: JSON.stringify({{ email: u.email, old_password: o, new_password: n }}) }});
                     const d = await r.json();
-                    if (r.ok) { s.textContent = '✅ Пароль изменён!'; localStorage.setItem('siteforge_pass', n); }
-                    else { s.textContent = '❌ ' + d.detail; }
-                } catch(e) { s.textContent = '❌ Ошибка'; }
-            }
-            function logout() { localStorage.removeItem('siteforge_user'); localStorage.removeItem('siteforge_pass'); window.location.href = '/'; }
+                    if (r.ok) {{ s.textContent = '✅ Пароль изменён!'; localStorage.setItem('siteforge_pass', n); }}
+                    else {{ s.textContent = '❌ ' + d.detail; }}
+                }} catch(e) {{ s.textContent = '❌ Ошибка'; }}
+            }}
+            function logout() {{ localStorage.removeItem('siteforge_user'); localStorage.removeItem('siteforge_pass'); window.location.href = '/'; }}
         </script>
     </body>
     </html>
@@ -502,7 +504,7 @@ def profile_page():
 
 @app.get("/auth", response_class=HTMLResponse)
 def auth_page():
-    return """<!DOCTYPE html><html https://raw.githubusercontent.com/dimkavihrov-lab/ai-site-builder-public/main/black%20minimalist%20home%20logo.pnglang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>SiteForge — Вход</title><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='#6d28d9'/><text x='50' y='68' font-size='52' font-weight='bold' fill='white' text-anchor='middle' font-family='Arial'>SF</text></svg>"><script src="https://cdn.tailwindcss.com"></script><style>.input-field{width:100%;padding:14px;border-radius:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;font-size:15px;outline:none;margin-bottom:16px}.input-field:focus{border-color:#8b5cf6}.btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:14px;border-radius:14px;font-weight:bold;border:none;width:100%;cursor:pointer}</style></head><body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen"><div class="max-w-md w-full px-4 mx-auto py-12"><a href="/" class="text-gray-400 hover:text-white text-sm">← Назад</a><div class="text-center mb-8 mt-4"><img src="" alt="SiteForge" style="height:48px;border-radius:12px;margin-bottom:12px" onerror="this.style.display='none'"><h1 class="text-2xl font-bold">Вход / Регистрация</h1></div><div class="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10"><div id="afl"><h3 class="text-sm font-bold mb-4">Вход</h3><input id="le" type="email" placeholder="Email" class="input-field"><input id="lp" type="password" placeholder="Пароль" class="input-field"><button onclick="login()" class="btn-primary mb-3">Войти</button><p class="text-xs text-gray-400 text-center mt-2">Нет аккаунта? <a href="#" onclick="showReg()" class="text-white font-bold hover:underline">Зарегистрироваться</a></p></div><div id="afr" style="display:none"><h3 class="text-sm font-bold mb-4">Регистрация</h3><input id="re" type="email" placeholder="Email" class="input-field"><input id="rp" type="password" placeholder="Пароль" class="input-field"><input id="rp2" type="password" placeholder="Подтвердите пароль" class="input-field"><button onclick="register()" class="btn-primary mb-3">Зарегистрироваться</button><p class="text-xs text-gray-400 text-center mt-2">Уже есть аккаунт? <a href="#" onclick="showLog()" class="text-white font-bold hover:underline">Войти</a></p></div><p id="as" class="mt-3 text-xs text-center text-gray-400"></p></div></div><script>function showLog(){document.getElementById('afl').style.display='block';document.getElementById('afr').style.display='none';document.getElementById('as').textContent=''}function showReg(){document.getElementById('afl').style.display='none';document.getElementById('afr').style.display='block';document.getElementById('as').textContent=''}async function login(){const e=document.getElementById('le').value,p=document.getElementById('lp').value,s=document.getElementById('as');if(!e||!p){s.textContent='Заполните все поля';return}try{const r=await fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})});if(!r.ok){const d=await r.json();s.textContent='❌ '+d.detail}else{const u=await r.json();localStorage.setItem('siteforge_user',JSON.stringify(u));localStorage.setItem('siteforge_pass',p);s.textContent='✅ Вход выполнен!';setTimeout(()=>{window.location.href='/'},1000)}}catch(e){s.textContent='❌ Ошибка: '+e.message}}async function register(){const e=document.getElementById('re').value,p=document.getElementById('rp').value,p2=document.getElementById('rp2').value,s=document.getElementById('as');if(!e||!p||!p2){s.textContent='Заполните все поля';return}if(p!==p2){s.textContent='❌ Пароли не совпадают';return}if(p.length<4){s.textContent='❌ Пароль от 4 символов';return}try{const r=await fetch('/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})});const d=await r.json();if(!r.ok){s.textContent='❌ '+d.detail}else{s.textContent='✅ Регистрация успешна! Теперь войдите.';showLog();document.getElementById('le').value=e}}catch(e){s.textContent='❌ Ошибка: '+e.message}}</script></body></html>"""
+    return f"""<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>SiteForge — Вход</title><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='#6d28d9'/><text x='50' y='68' font-size='52' font-weight='bold' fill='white' text-anchor='middle' font-family='Arial'>SF</text></svg>"><script src="https://cdn.tailwindcss.com"></script><style>.input-field{{width:100%;padding:14px;border-radius:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;font-size:15px;outline:none;margin-bottom:16px}}.input-field:focus{{border-color:#8b5cf6}}.btn-primary{{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:14px;border-radius:14px;font-weight:bold;border:none;width:100%;cursor:pointer}}</style></head><body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen"><div class="max-w-md w-full px-4 mx-auto py-12"><a href="/" class="text-gray-400 hover:text-white text-sm">← Назад</a><div class="text-center mb-8 mt-4"><img src="{LOGO_URL}" alt="SiteForge" style="height:48px;border-radius:12px;margin-bottom:12px" onerror="this.style.display='none'"><h1 class="text-2xl font-bold">Вход / Регистрация</h1></div><div class="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10"><div id="afl"><h3 class="text-sm font-bold mb-4">Вход</h3><input id="le" type="email" placeholder="Email" class="input-field"><input id="lp" type="password" placeholder="Пароль" class="input-field"><button onclick="login()" class="btn-primary mb-3">Войти</button><p class="text-xs text-gray-400 text-center mt-2">Нет аккаунта? <a href="#" onclick="showReg()" class="text-white font-bold hover:underline">Зарегистрироваться</a></p></div><div id="afr" style="display:none"><h3 class="text-sm font-bold mb-4">Регистрация</h3><input id="re" type="email" placeholder="Email" class="input-field"><input id="rp" type="password" placeholder="Пароль" class="input-field"><input id="rp2" type="password" placeholder="Подтвердите пароль" class="input-field"><button onclick="register()" class="btn-primary mb-3">Зарегистрироваться</button><p class="text-xs text-gray-400 text-center mt-2">Уже есть аккаунт? <a href="#" onclick="showLog()" class="text-white font-bold hover:underline">Войти</a></p></div><p id="as" class="mt-3 text-xs text-center text-gray-400"></p></div></div><script>function showLog(){{document.getElementById('afl').style.display='block';document.getElementById('afr').style.display='none';document.getElementById('as').textContent=''}}function showReg(){{document.getElementById('afl').style.display='none';document.getElementById('afr').style.display='block';document.getElementById('as').textContent=''}}async function login(){{const e=document.getElementById('le').value,p=document.getElementById('lp').value,s=document.getElementById('as');if(!e||!p){{s.textContent='Заполните все поля';return}}try{{const r=await fetch('/login',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{email:e,password:p}})}});if(!r.ok){{const d=await r.json();s.textContent='❌ '+d.detail}}else{{const u=await r.json();localStorage.setItem('siteforge_user',JSON.stringify(u));localStorage.setItem('siteforge_pass',p);s.textContent='✅ Вход выполнен!';setTimeout(()=>{{window.location.href='/'}},1000)}}}}catch(e){{s.textContent='❌ Ошибка: '+e.message}}}}async function register(){{const e=document.getElementById('re').value,p=document.getElementById('rp').value,p2=document.getElementById('rp2').value,s=document.getElementById('as');if(!e||!p||!p2){{s.textContent='Заполните все поля';return}}if(p!==p2){{s.textContent='❌ Пароли не совпадают';return}}if(p.length<4){{s.textContent='❌ Пароль от 4 символов';return}}try{{const r=await fetch('/register',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{email:e,password:p}})}});const d=await r.json();if(!r.ok){{s.textContent='❌ '+d.detail}}else{{s.textContent='✅ Регистрация успешна! Теперь войдите.';showLog();document.getElementById('le').value=e}}}}catch(e){{s.textContent='❌ Ошибка: '+e.message}}}}</script></body></html>"""
 
 @app.get("/thanks", response_class=HTMLResponse)
 def thanks_page():
