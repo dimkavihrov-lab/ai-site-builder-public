@@ -118,6 +118,18 @@ def change_password(req: ChangePasswordRequest):
     conn.close()
     return {"message": "Пароль изменён"}
 
+@app.get("/stats")
+def stats():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM users")
+    total = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '24 hours'")
+    today = cur.fetchone()[0]
+    cur.close()
+    conn.close()
+    return {"total_users": total, "today_users": today}
+
 @app.post("/edit")
 def edit_html(req: EditRequest):
     return {"html": req.html.replace(req.old_text, req.new_text)}
@@ -217,9 +229,7 @@ def home():
             .dropdown-menu.active .dropdown-content { display: block; }
             .dropdown-option { display: block; width: 100%; padding: 10px 14px; text-align: left; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: #d1d5db; font-size: 13px; cursor: pointer; border-radius: 8px; margin-bottom: 3px; transition: all 0.15s; }
             .dropdown-option:hover { background: rgba(139,92,246,0.2); color: white; border-color: #8b5cf6; }
-            .logo { width: 56px; height: 56px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
-            .logo span { color: white; font-size: 24px; font-weight: 900; font-family: Arial, sans-serif; letter-spacing: -1px; }
-            /* Desktop */
+            .black minimalist home logo-img { height: 48px; border-radius: 12px; margin-bottom: 8px; }
             @media (min-width: 768px) {
                 .max-w-2xl { max-width: 800px !important; }
                 #preview-frame { height: 70vh; }
@@ -243,7 +253,7 @@ def home():
             </div>
             
             <div class="text-center mb-6">
-                <div class="logo"><span>SF</span></div>
+                <img src="/static/black minimalist home logo.png" alt="SiteForge" class="logo-img" onerror="this.style.display='none'">
                 <h1 class="text-4xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">SiteForge</h1>
                 <p class="text-gray-400 mt-2 text-sm">Создайте HTML-шаблон за секунды</p>
             </div>
@@ -381,18 +391,10 @@ def home():
                 const menu = document.getElementById(id);
                 const content = menu.querySelector('.dropdown-content');
                 const rect = menu.getBoundingClientRect();
-                const spaceBelow = window.innerHeight - rect.bottom;
-                const spaceAbove = rect.top;
-                if (spaceBelow < 260 && spaceAbove > spaceBelow) {
-                    content.style.bottom = '100%';
-                    content.style.top = 'auto';
-                    content.style.marginTop = '0';
-                    content.style.marginBottom = '8px';
+                if (window.innerHeight - rect.bottom < 260 && rect.top > 260) {
+                    content.style.bottom = '100%'; content.style.top = 'auto'; content.style.marginTop = '0'; content.style.marginBottom = '8px';
                 } else {
-                    content.style.bottom = 'auto';
-                    content.style.top = '100%';
-                    content.style.marginTop = '4px';
-                    content.style.marginBottom = '0';
+                    content.style.bottom = 'auto'; content.style.top = '100%'; content.style.marginTop = '4px'; content.style.marginBottom = '0';
                 }
                 menu.classList.toggle('active');
             }
@@ -446,6 +448,7 @@ def profile_page():
                         <div class="package-card popular"><h3 class="text-lg font-bold">30 ген.</h3><p class="text-2xl font-bold my-2">400₽</p><button class="btn-buy" disabled>Скоро</button></div>
                         <div class="package-card"><h3 class="text-lg font-bold">50 ген.</h3><p class="text-2xl font-bold my-2">600₽</p><button class="btn-buy" disabled>Скоро</button></div>
                     </div>
+                    <p class="text-center text-xs text-gray-500 mt-4" id="stats-line"></p>
                     <div class="mt-6 flex justify-between items-end">
                         <div>
                             <button onclick="toggleChangePassword()" id="pwd-toggle-btn" class="text-red-400 hover:text-red-300 text-sm">Сменить пароль</button>
@@ -470,6 +473,9 @@ def profile_page():
                 document.getElementById('pa').textContent = u.email.charAt(0).toUpperCase();
                 document.getElementById('pe').textContent = u.email;
                 document.getElementById('pb').textContent = (u.is_superuser ? '∞' : Math.max(0, 3 - u.generations_used)) + ' ген.';
+                fetch('/stats').then(r => r.json()).then(d => {
+                    document.getElementById('stats-line').textContent = '👥 Всего пользователей: ' + d.total_users + ' | За 24 часа: ' + d.today_users;
+                });
             }
             function toggleChangePassword() {
                 const f = document.getElementById('change-pwd-form'), b = document.getElementById('pwd-toggle-btn');
@@ -496,7 +502,7 @@ def profile_page():
 
 @app.get("/auth", response_class=HTMLResponse)
 def auth_page():
-    return """<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>SiteForge — Вход</title><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='#6d28d9'/><text x='50' y='68' font-size='52' font-weight='bold' fill='white' text-anchor='middle' font-family='Arial'>SF</text></svg>"><script src="https://cdn.tailwindcss.com"></script><style>.input-field{width:100%;padding:14px;border-radius:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;font-size:15px;outline:none;margin-bottom:16px}.input-field:focus{border-color:#8b5cf6}.btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:14px;border-radius:14px;font-weight:bold;border:none;width:100%;cursor:pointer}</style></head><body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen"><div class="max-w-md w-full px-4 mx-auto py-12"><a href="/" class="text-gray-400 hover:text-white text-sm">← Назад</a><div class="text-center mb-8 mt-4"><div class="logo" style="width:56px;height:56px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;"><span style="color:white;font-size:24px;font-weight:900;font-family:Arial;letter-spacing:-1px">SF</span></div><h1 class="text-2xl font-bold">Вход / Регистрация</h1></div><div class="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10"><div id="afl"><h3 class="text-sm font-bold mb-4">Вход</h3><input id="le" type="email" placeholder="Email" class="input-field"><input id="lp" type="password" placeholder="Пароль" class="input-field"><button onclick="login()" class="btn-primary mb-3">Войти</button><p class="text-xs text-gray-400 text-center mt-2">Нет аккаунта? <a href="#" onclick="showReg()" class="text-white font-bold hover:underline">Зарегистрироваться</a></p></div><div id="afr" style="display:none"><h3 class="text-sm font-bold mb-4">Регистрация</h3><input id="re" type="email" placeholder="Email" class="input-field"><input id="rp" type="password" placeholder="Пароль" class="input-field"><input id="rp2" type="password" placeholder="Подтвердите пароль" class="input-field"><button onclick="register()" class="btn-primary mb-3">Зарегистрироваться</button><p class="text-xs text-gray-400 text-center mt-2">Уже есть аккаунт? <a href="#" onclick="showLog()" class="text-white font-bold hover:underline">Войти</a></p></div><p id="as" class="mt-3 text-xs text-center text-gray-400"></p></div></div><script>function showLog(){document.getElementById('afl').style.display='block';document.getElementById('afr').style.display='none';document.getElementById('as').textContent=''}function showReg(){document.getElementById('afl').style.display='none';document.getElementById('afr').style.display='block';document.getElementById('as').textContent=''}async function login(){const e=document.getElementById('le').value,p=document.getElementById('lp').value,s=document.getElementById('as');if(!e||!p){s.textContent='Заполните все поля';return}try{const r=await fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})});if(!r.ok){const d=await r.json();s.textContent='❌ '+d.detail}else{const u=await r.json();localStorage.setItem('siteforge_user',JSON.stringify(u));localStorage.setItem('siteforge_pass',p);s.textContent='✅ Вход выполнен!';setTimeout(()=>{window.location.href='/'},1000)}}catch(e){s.textContent='❌ Ошибка: '+e.message}}async function register(){const e=document.getElementById('re').value,p=document.getElementById('rp').value,p2=document.getElementById('rp2').value,s=document.getElementById('as');if(!e||!p||!p2){s.textContent='Заполните все поля';return}if(p!==p2){s.textContent='❌ Пароли не совпадают';return}if(p.length<4){s.textContent='❌ Пароль от 4 символов';return}try{const r=await fetch('/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})});const d=await r.json();if(!r.ok){s.textContent='❌ '+d.detail}else{s.textContent='✅ Регистрация успешна! Теперь войдите.';showLog();document.getElementById('le').value=e}}catch(e){s.textContent='❌ Ошибка: '+e.message}}</script></body></html>"""
+    return """<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>SiteForge — Вход</title><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='#6d28d9'/><text x='50' y='68' font-size='52' font-weight='bold' fill='white' text-anchor='middle' font-family='Arial'>SF</text></svg>"><script src="https://cdn.tailwindcss.com"></script><style>.input-field{width:100%;padding:14px;border-radius:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:white;font-size:15px;outline:none;margin-bottom:16px}.input-field:focus{border-color:#8b5cf6}.btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:14px;border-radius:14px;font-weight:bold;border:none;width:100%;cursor:pointer}</style></head><body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen"><div class="max-w-md w-full px-4 mx-auto py-12"><a href="/" class="text-gray-400 hover:text-white text-sm">← Назад</a><div class="text-center mb-8 mt-4"><img src="/static/logo.png" alt="SiteForge" style="height:48px;border-radius:12px;margin-bottom:12px" onerror="this.style.display='none'"><h1 class="text-2xl font-bold">Вход / Регистрация</h1></div><div class="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10"><div id="afl"><h3 class="text-sm font-bold mb-4">Вход</h3><input id="le" type="email" placeholder="Email" class="input-field"><input id="lp" type="password" placeholder="Пароль" class="input-field"><button onclick="login()" class="btn-primary mb-3">Войти</button><p class="text-xs text-gray-400 text-center mt-2">Нет аккаунта? <a href="#" onclick="showReg()" class="text-white font-bold hover:underline">Зарегистрироваться</a></p></div><div id="afr" style="display:none"><h3 class="text-sm font-bold mb-4">Регистрация</h3><input id="re" type="email" placeholder="Email" class="input-field"><input id="rp" type="password" placeholder="Пароль" class="input-field"><input id="rp2" type="password" placeholder="Подтвердите пароль" class="input-field"><button onclick="register()" class="btn-primary mb-3">Зарегистрироваться</button><p class="text-xs text-gray-400 text-center mt-2">Уже есть аккаунт? <a href="#" onclick="showLog()" class="text-white font-bold hover:underline">Войти</a></p></div><p id="as" class="mt-3 text-xs text-center text-gray-400"></p></div></div><script>function showLog(){document.getElementById('afl').style.display='block';document.getElementById('afr').style.display='none';document.getElementById('as').textContent=''}function showReg(){document.getElementById('afl').style.display='none';document.getElementById('afr').style.display='block';document.getElementById('as').textContent=''}async function login(){const e=document.getElementById('le').value,p=document.getElementById('lp').value,s=document.getElementById('as');if(!e||!p){s.textContent='Заполните все поля';return}try{const r=await fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})});if(!r.ok){const d=await r.json();s.textContent='❌ '+d.detail}else{const u=await r.json();localStorage.setItem('siteforge_user',JSON.stringify(u));localStorage.setItem('siteforge_pass',p);s.textContent='✅ Вход выполнен!';setTimeout(()=>{window.location.href='/'},1000)}}catch(e){s.textContent='❌ Ошибка: '+e.message}}async function register(){const e=document.getElementById('re').value,p=document.getElementById('rp').value,p2=document.getElementById('rp2').value,s=document.getElementById('as');if(!e||!p||!p2){s.textContent='Заполните все поля';return}if(p!==p2){s.textContent='❌ Пароли не совпадают';return}if(p.length<4){s.textContent='❌ Пароль от 4 символов';return}try{const r=await fetch('/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})});const d=await r.json();if(!r.ok){s.textContent='❌ '+d.detail}else{s.textContent='✅ Регистрация успешна! Теперь войдите.';showLog();document.getElementById('le').value=e}}catch(e){s.textContent='❌ Ошибка: '+e.message}}</script></body></html>"""
 
 @app.get("/thanks", response_class=HTMLResponse)
 def thanks_page():
