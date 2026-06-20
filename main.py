@@ -12,6 +12,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 client = OpenAI(
+    from fastapi.staticfiles import StaticFiles
+app.mount("/static", StaticFiles(directory="."), name="static")
     api_key=os.getenv("PROXYAPI_KEY"),
     base_url="https://api.proxyapi.ru/openai/v1"
 )
