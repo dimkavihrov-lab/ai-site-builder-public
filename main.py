@@ -216,7 +216,7 @@ def home():
             .copy-option { display: block; width: 100%; padding: 8px 12px; text-align: left; background: none; border: none; color: #d1d5db; font-size: 13px; cursor: pointer; border-radius: 8px; }
             .copy-option:hover { background: rgba(139,92,246,0.2); color: white; }
             .edit-btn { color: #60a5fa; text-decoration: none; font-size: 13px; cursor: pointer; background: none; border: none; }
-            .edit-btn:hover { text-decoration: underline; text-decoration-color: white; }
+            .edit-btn:hover { color: #93c5fd; text-decoration: none; }
             .editable-hint { position: absolute; background: #8b5cf6; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; pointer-events: none; display: none; z-index: 200; }
         </style>
     </head>
@@ -354,15 +354,17 @@ def home():
             }
             
             function saveToGallery() {
-                if (!currentHtml) { alert('Сначала создайте шаблон!'); return; }
-                const title = document.getElementById('desc').value || 'Без названия';
-                gallery.unshift({ title, html: currentHtml, date: new Date().toLocaleString() });
-                if (gallery.length > 50) gallery = gallery.slice(0, 50);
-                localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
-                renderGallery();
-                document.getElementById('status').textContent = '💾 Сохранено в галерею!';
-                setTimeout(() => { document.getElementById('status').textContent = '✅ Готово!'; }, 2000);
-            }
+    if (!currentHtml) { alert('Сначала создайте шаблон!'); return; }
+    const title = document.getElementById('desc').value || 'Без названия';
+    // Загружаем актуальную галерею перед сохранением
+    gallery = JSON.parse(localStorage.getItem('siteforge_gallery') || '[]');
+    gallery.unshift({ title, html: currentHtml, date: new Date().toLocaleString() });
+    if (gallery.length > 50) gallery = gallery.slice(0, 50);
+    localStorage.setItem('siteforge_gallery', JSON.stringify(gallery));
+    renderGallery();
+    document.getElementById('status').textContent = '💾 Сохранено в галерею!';
+    setTimeout(() => { document.getElementById('status').textContent = '✅ Готово!'; }, 2000);
+}
             
             function renderGallery() {
                 const list = document.getElementById('gallery-list');
