@@ -175,7 +175,7 @@ def generate_site(req: SiteRequest):
     if '<body' in html and 'bg-' not in html.split('<body')[1].split('>')[0]:
         html = html.replace('<body', '<body class="bg-gray-50"')
     
-    html = html.replace('</head>', '<style>body{max-width:100vw!important;overflow-x:hidden!important;background:#f9fafb!important}a{text-decoration:none!important;pointer-events:none;cursor:default;color:inherit}*{word-wrap:break-word!important;overflow-wrap:anywhere!important}</style></head>')
+    html = html.replace('</head>', '<style>body{{max-width:100vw!important;overflow-x:hidden!important;background:#f9fafb!important}}a{{text-decoration:none!important;pointer-events:none;cursor:default;color:inherit}}*{{word-wrap:break-word!important;overflow-wrap:anywhere!important}}</style></head>')
 
     if not user["is_superuser"]:
         conn = get_db()
@@ -227,11 +227,11 @@ def home():
             .edit-btn {{ color: #60a5fa; text-decoration: none; font-size: 13px; cursor: pointer; background: none; border: none; }}
             .edit-btn:hover {{ color: #93c5fd; text-decoration: none; }}
             .dropdown-menu {{ position: relative; display: inline-block; }}
-            .dropdown-content {{ display: none; position: absolute; left: 50%; transform: translateX(-50%); background: #1e1b4b; border-radius: 12px; padding: 6px; min-width: 200px; z-index: 200; border: 1px solid rgba(255,255,255,0.15); margin-top: 4px; max-height: 250px; overflow-y: auto; }}
+            .dropdown-content {{ display: none; position: absolute; left: 50%; transform: translateX(-50%); background: #1e1b4b; border-radius: 12px; padding: 6px; min-width: 200px; z-index: 200; border: 1px solid rgba(255,255,255,0.15); bottom: 100%; margin-bottom: 8px; max-height: 250px; overflow-y: auto; }}
             .dropdown-menu.active .dropdown-content {{ display: block; }}
             .dropdown-option {{ display: block; width: 100%; padding: 10px 14px; text-align: left; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: #d1d5db; font-size: 13px; cursor: pointer; border-radius: 8px; margin-bottom: 3px; transition: all 0.15s; }}
             .dropdown-option:hover {{ background: rgba(139,92,246,0.2); color: white; border-color: #8b5cf6; }}
-            .logo-img {{ height: 64px; border-radius: 14px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto; }}
+            .logo-img {{ height: 56px; border-radius: 14px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto; }}
             @media (min-width: 768px) {{
                 .max-w-2xl {{ max-width: 800px !important; }}
                 #preview-frame {{ height: 70vh; }}
@@ -270,13 +270,13 @@ def home():
                 <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
                     <span class="text-sm text-gray-300">Предпросмотр | <button onclick="toggleEditMode()" id="edit-mode-btn" class="edit-btn">✏️ Редактировать текст</button></span>
                     <div class="flex gap-1 flex-wrap items-center">
+                        <button onclick="downloadHTML()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">💾 Скачать HTML</button>
                         <div class="dropdown-menu" id="copyMenu">
                             <button onclick="toggleMenu('copyMenu')" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">📋 Копировать ▾</button>
                             <div class="dropdown-content">
                                 <button onclick="copyCode('full')" class="dropdown-option">📄 Весь HTML</button>
                                 <button onclick="copyCode('body')" class="dropdown-option">📝 Только body</button>
                                 <button onclick="copyCode('css')" class="dropdown-option">🎨 Только стили</button>
-                                <button onclick="downloadHTML()" class="dropdown-option">💾 Скачать HTML</button>
                             </div>
                         </div>
                         <div class="dropdown-menu" id="openMenu">
@@ -299,7 +299,7 @@ def home():
             <div class="text-center mt-4"><button onclick="toggleGallery()" class="text-sm text-gray-400 hover:text-white transition" id="gallery-toggle">📂 Сохранённые шаблоны</button></div>
         </div>
         <div id="help-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">Как пользоваться</h2><button onclick="closeModal('help')" class="text-gray-500 hover:text-red-400 text-xl">✕</button></div><div class="text-sm space-y-2"><p><strong>1.</strong> Зарегистрируйтесь или войдите.</p><p><strong>2.</strong> Опишите шаблон.</p><p><strong>3.</strong> Нажмите «Создать».</p><p><strong>4.</strong> Редактируйте, копируйте или откройте в редакторе.</p></div></div></div>
-        <div id="about-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">О нас</h2><button onclick="closeModal('about')" class="text-gray-500 hover:text-red-400 text-xl">✕</button></div><div class="text-sm space-y-2"><p><strong>SiteForge</strong> — генератор HTML-шаблонов с помощью ИИ.</p><p class="text-gray-400 mt-3">Версия: 2.0 | Сделано с ❤️</p></div></div></div>
+        <div id="about-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">О нас</h2><button onclick="closeModal('about')" class="text-gray-500 hover:text-red-400 text-xl">✕</button></div><div class="text-sm space-y-2"><p><strong>SiteForge</strong> — генератор HTML-шаблонов с помощью ИИ.</p><p class="text-gray-400 mt-3">Версия: 2.1 | Сделано с ❤️</p></div></div></div>
         <script>
             let currentHtml = '', isGenerating = false, editMode = false;
             let currentUser = JSON.parse(localStorage.getItem('siteforge_user') || 'null');
@@ -389,19 +389,9 @@ def home():
             function deleteFromGallery(i) {{ if (confirm('Удалить?')) {{ gallery.splice(i, 1); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); }} }}
             function clearGallery() {{ if (confirm('Удалить ВСЁ?')) {{ gallery = []; localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); }} }}
             function toggleGallery() {{ const s = document.getElementById('gallery-section'), b = document.getElementById('gallery-toggle'); if (s.style.display === 'block') {{ s.style.display = 'none'; b.textContent = '📂 Сохранённые шаблоны'; }} else {{ s.style.display = 'block'; b.textContent = '📂 Скрыть шаблоны'; galleryVisible = 4; renderGallery(); }} }}
-            function toggleMenu(id) {{
-                const menu = document.getElementById(id);
-                const content = menu.querySelector('.dropdown-content');
-                const rect = menu.getBoundingClientRect();
-                if (window.innerHeight - rect.bottom < 260 && rect.top > 260) {{
-                    content.style.bottom = '100%'; content.style.top = 'auto'; content.style.marginTop = '0'; content.style.marginBottom = '8px';
-                }} else {{
-                    content.style.bottom = 'auto'; content.style.top = '100%'; content.style.marginTop = '4px'; content.style.marginBottom = '0';
-                }}
-                menu.classList.toggle('active');
-            }}
+            function toggleMenu(id) {{ document.getElementById(id).classList.toggle('active'); }}
             function copyCode(mode) {{ if (!currentHtml) {{ alert('Сначала создайте шаблон!'); return; }} let t = ''; if (mode === 'full') t = currentHtml; else if (mode === 'body') {{ const m = currentHtml.match(/<body[^>]*>([\\s\\S]*)<\\/body>/i); t = m ? m[1] : currentHtml; }} else if (mode === 'css') {{ const m = currentHtml.match(/<style[^>]*>([\\s\\S]*)<\\/style>/i); t = m ? m[1] : '/* нет */'; }} navigator.clipboard.writeText(t.trim()).then(() => {{ alert('Скопировано!'); toggleMenu('copyMenu'); }}); }}
-            function downloadHTML() {{ if (!currentHtml) {{ alert('Сначала создайте шаблон!'); return; }} const b = new Blob([currentHtml], {{type: 'text/html'}}), u = URL.createObjectURL(b), a = document.createElement('a'); a.href = u; a.download = 'шаблон.html'; a.click(); URL.revokeObjectURL(u); toggleMenu('copyMenu'); }}
+            function downloadHTML() {{ if (!currentHtml) {{ alert('Сначала создайте шаблон!'); return; }} const b = new Blob([currentHtml], {{type: 'text/html'}}), u = URL.createObjectURL(b), a = document.createElement('a'); a.href = u; a.download = 'шаблон.html'; a.click(); URL.revokeObjectURL(u); }}
             function openInCodepen() {{ if (!currentHtml) {{ alert('Сначала создайте шаблон!'); return; }} const f = document.createElement('form'); f.method = 'POST'; f.action = 'https://codepen.io/pen/define'; f.target = '_blank'; const i = document.createElement('input'); i.type = 'hidden'; i.name = 'data'; i.value = JSON.stringify({{ title: 'SiteForge Template', html: currentHtml, css: '', js: '' }}); f.appendChild(i); document.body.appendChild(f); f.submit(); document.body.removeChild(f); toggleMenu('openMenu'); }}
             function openInWordpress() {{ if (!currentHtml) {{ alert('Сначала создайте шаблон!'); return; }} navigator.clipboard.writeText(currentHtml); alert('HTML скопирован! Вставьте его в редактор WordPress (блок "HTML-код").'); toggleMenu('openMenu'); }}
             function closePreview() {{ document.getElementById('preview-frame').style.display = 'none'; document.getElementById('preview-container').style.display = 'none'; currentHtml = ''; editMode = false; document.getElementById('edit-mode-btn').textContent = '✏️ Редактировать текст'; }}
