@@ -231,7 +231,7 @@ def home():
             .dropdown-menu.active .dropdown-content {{ display: block; }}
             .dropdown-option {{ display: block; width: 100%; padding: 10px 14px; text-align: left; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: #d1d5db; font-size: 13px; cursor: pointer; border-radius: 8px; margin-bottom: 3px; transition: all 0.15s; }}
             .dropdown-option:hover {{ background: rgba(139,92,246,0.2); color: white; border-color: #8b5cf6; }}
-            .logo-img { height: 64px; border-radius: 14px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto; }
+            .logo-img { height: 48px; border-radius: 12px; margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto; }
             @media (min-width: 768px) {{
                 .max-w-2xl {{ max-width: 800px !important; }}
                 #preview-frame {{ height: 70vh; }}
