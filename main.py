@@ -142,7 +142,8 @@ def generate_site(req: SiteRequest):
             "role": "system",
             "content": (
                 "Ты генератор HTML-шаблонов. Создай КРАСИВЫЙ адаптивный HTML-шаблон с Tailwind CSS (CDN). "
-                "ОБЯЗАТЕЛЬНО используй явный фон для body. Заголовки должны быть краткими (до 30 символов), не обрезаться. "
+                "ОБЯЗАТЕЛЬНО используй явный фон для body. Заголовки до 30 символов, не обрезаются. "
+                "Все кнопки и пункты меню выровнены по центру (flex justify-center). "
                 "Базовые секции, placeholder.com для картинок, неактивные ссылки. Градиенты, тени, анимации. Отвечай ТОЛЬКО HTML в ```html ...```."
             )
         }, {"role": "user", "content": f"Создай шаблон: {req.description}"}],
@@ -209,7 +210,11 @@ def home():
             .modal-content { background: #0f0d2e; border-radius: 16px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); color: #d1d5db; }
             .edit-btn { color: #60a5fa; text-decoration: none; font-size: 13px; cursor: pointer; background: none; border: none; }
             .edit-btn:hover { color: #93c5fd; text-decoration: none; }
-            .editable-hint { position: absolute; background: #8b5cf6; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; pointer-events: none; display: none; z-index: 200; }
+            .dropdown-menu { position: relative; display: inline-block; }
+            .dropdown-content { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1e1b4b; border-radius: 12px; padding: 6px; min-width: 200px; z-index: 50; border: 1px solid rgba(255,255,255,0.15); margin-bottom: 4px; }
+            .dropdown-menu.active .dropdown-content { display: block; }
+            .dropdown-option { display: block; width: 100%; padding: 10px 14px; text-align: left; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: #d1d5db; font-size: 13px; cursor: pointer; border-radius: 8px; margin-bottom: 3px; transition: all 0.15s; }
+            .dropdown-option:hover { background: rgba(139,92,246,0.2); color: white; border-color: #8b5cf6; }
         </style>
     </head>
     <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
@@ -237,20 +242,20 @@ def home():
                 <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
                     <span class="text-sm text-gray-300">Предпросмотр | <button onclick="toggleEditMode()" id="edit-mode-btn" class="edit-btn">✏️ Редактировать текст</button></span>
                     <div class="flex gap-1 flex-wrap items-center">
-                        <button onclick="downloadHTML()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">📥 Скачать</button>
-                        <div class="copy-menu" id="copyMenu">
-                            <button onclick="toggleCopyMenu()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">📋 Копировать ▾</button>
-                            <div class="copy-dropdown">
-                                <button onclick="copyCode('full')" class="copy-option">📄 Весь HTML</button>
-                                <button onclick="copyCode('body')" class="copy-option">📝 Только body</button>
-                                <button onclick="copyCode('css')" class="copy-option">🎨 Только стили</button>
+                        <div class="dropdown-menu" id="copyMenu">
+                            <button onclick="toggleMenu('copyMenu')" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">📋 Копировать ▾</button>
+                            <div class="dropdown-content">
+                                <button onclick="copyCode('full')" class="dropdown-option">📄 Весь HTML</button>
+                                <button onclick="copyCode('body')" class="dropdown-option">📝 Только body</button>
+                                <button onclick="copyCode('css')" class="dropdown-option">🎨 Только стили</button>
                             </div>
                         </div>
-                        <div class="copy-menu" id="openMenu">
-                            <button onclick="toggleOpenMenu()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">🔗 Открыть в ▾</button>
-                            <div class="copy-dropdown">
-                                <button onclick="openInCodepen()" class="copy-option">📝 CodePen</button>
-                                <button onclick="downloadHTML()" class="copy-option">💾 Скачать HTML</button>
+                        <div class="dropdown-menu" id="openMenu">
+                            <button onclick="toggleMenu('openMenu')" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">🔗 Открыть в ▾</button>
+                            <div class="dropdown-content">
+                                <button onclick="openInCodepen()" class="dropdown-option">📝 CodePen</button>
+                                <button onclick="downloadHTML()" class="dropdown-option">💾 Скачать HTML</button>
+                                <button onclick="openInWordpress()" class="dropdown-option">📰 WordPress</button>
                             </div>
                         </div>
                         <button onclick="closePreview()" class="text-gray-500 hover:text-red-400 text-lg px-2 leading-none transition">✕</button>
@@ -264,9 +269,8 @@ def home():
             </div>
             <div class="text-center mt-4"><button onclick="toggleGallery()" class="text-sm text-gray-400 hover:text-white transition" id="gallery-toggle">📂 Сохранённые шаблоны</button></div>
         </div>
-        <div id="help-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">Как пользоваться</h2><button onclick="closeModal('help')" class="text-gray-500 hover:text-red-400 text-xl">✕</button></div><div class="text-sm space-y-2"><p><strong>1.</strong> Зарегистрируйтесь или войдите.</p><p><strong>2.</strong> Опишите шаблон.</p><p><strong>3.</strong> Нажмите «Создать».</p><p><strong>4.</strong> Редактируйте текст, копируйте или откройте в CodePen.</p></div></div></div>
-        <div id="about-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">О нас</h2><button onclick="closeModal('about')" class="text-gray-500 hover:text-red-400 text-xl">✕</button></div><div class="text-sm space-y-2"><p><strong>SiteForge</strong> — генератор HTML-шаблонов с помощью ИИ.</p><p class="text-gray-400 mt-3">Версия: 1.3 | Сделано с ❤️</p></div></div></div>
-        <div class="editable-hint" id="edit-hint">Нажмите на текст чтобы изменить</div>
+        <div id="help-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">Как пользоваться</h2><button onclick="closeModal('help')" class="text-gray-500 hover:text-red-400 text-xl">✕</button></div><div class="text-sm space-y-2"><p><strong>1.</strong> Зарегистрируйтесь или войдите.</p><p><strong>2.</strong> Опишите шаблон.</p><p><strong>3.</strong> Нажмите «Создать».</p><p><strong>4.</strong> Редактируйте, копируйте или откройте в редакторе.</p></div></div></div>
+        <div id="about-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">О нас</h2><button onclick="closeModal('about')" class="text-gray-500 hover:text-red-400 text-xl">✕</button></div><div class="text-sm space-y-2"><p><strong>SiteForge</strong> — генератор HTML-шаблонов с помощью ИИ.</p><p class="text-gray-400 mt-3">Версия: 1.4 | Сделано с ❤️</p></div></div></div>
         <script>
             let currentHtml = '', isGenerating = false, editMode = false;
             let currentUser = JSON.parse(localStorage.getItem('siteforge_user') || 'null');
@@ -297,8 +301,7 @@ def home():
                     else {
                         if (!currentUser.is_superuser) { currentUser.generations_used++; localStorage.setItem('siteforge_user', JSON.stringify(currentUser)); }
                         currentHtml = data.html; f.style.display = 'block'; c.style.display = 'block'; f.srcdoc = data.html;
-                        s.textContent = '✅ Готово! (автосохранено)'; updateTopBar();
-                        // Автосохранение
+                        s.textContent = '✅ Готово!'; updateTopBar();
                         gallery = JSON.parse(localStorage.getItem('siteforge_gallery') || '[]');
                         gallery.unshift({ title: d, html: currentHtml, date: new Date().toLocaleString() });
                         if (gallery.length > 50) gallery = gallery.slice(0, 50);
@@ -313,7 +316,6 @@ def home():
                 const btn = document.getElementById('edit-mode-btn');
                 btn.textContent = editMode ? '✏️ Редактирование ВКЛ' : '✏️ Редактировать текст';
                 btn.className = editMode ? 'edit-btn font-bold' : 'edit-btn';
-                document.getElementById('edit-hint').style.display = editMode ? 'block' : 'none';
                 enableEditInFrame();
             }
             
@@ -336,7 +338,7 @@ def home():
                                     input.style.border = '2px solid #8b5cf6'; input.style.borderRadius = '4px';
                                     input.style.fontSize = window.getComputedStyle(el).fontSize;
                                     el.textContent = ''; el.appendChild(input); input.focus();
-                                    input.onblur = function() { el.textContent = input.value; currentHtml = currentHtml.replace(old, input.value); el.style.cursor = 'text'; };
+                                    input.onblur = function() { el.textContent = input.value; currentHtml = currentHtml.replace(old, input.value); };
                                     input.onkeydown = function(ev) { if (ev.key === 'Enter') input.blur(); };
                                 };
                             } else { el.style.cursor = 'default'; el.style.outline = 'none'; el.onclick = null; }
@@ -348,19 +350,9 @@ def home():
             function renderGallery() {
                 const list = document.getElementById('gallery-list');
                 const visible = gallery.slice(0, galleryVisible);
-                list.innerHTML = visible.map((s, i) => `
-                    <div class="site-card" onclick="loadFromGallery(${i})">
-                        <div class="flex justify-between items-center">
-                            <div style="max-width: 70%;">
-                                <span class="text-sm font-medium" style="word-wrap: break-word;">${s.title}</span>
-                                <span class="text-xs text-gray-500 ml-2">${s.date}</span>
-                            </div>
-                            <button onclick="event.stopPropagation(); deleteFromGallery(${i})" class="text-red-400 text-xs hover:text-red-300">Удалить</button>
-                        </div>
-                    </div>
-                `).join('');
+                list.innerHTML = visible.map((s, i) => `<div class="site-card" onclick="loadFromGallery(${i})"><div class="flex justify-between items-center"><div style="max-width:70%"><span class="text-sm font-medium" style="word-wrap:break-word">${s.title}</span><span class="text-xs text-gray-500 ml-2">${s.date}</span></div><button onclick="event.stopPropagation();deleteFromGallery(${i})" class="text-red-400 text-xs">Удалить</button></div></div>`).join('');
                 if (gallery.length > 4 && galleryVisible === 4) list.innerHTML += `<button onclick="showAll()" class="w-full text-center text-sm text-purple-400 py-2">Показать все (${gallery.length})</button>`;
-                if (!gallery.length) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто. Создайте первый шаблон!</p>';
+                if (!gallery.length) list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Пока пусто.</p>';
             }
             
             function showAll() { galleryVisible = gallery.length; renderGallery(); }
@@ -368,25 +360,15 @@ def home():
             function deleteFromGallery(i) { if (confirm('Удалить?')) { gallery.splice(i, 1); localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
             function clearGallery() { if (confirm('Удалить ВСЁ?')) { gallery = []; localStorage.setItem('siteforge_gallery', JSON.stringify(gallery)); renderGallery(); } }
             function toggleGallery() { const s = document.getElementById('gallery-section'), b = document.getElementById('gallery-toggle'); if (s.style.display === 'block') { s.style.display = 'none'; b.textContent = '📂 Сохранённые шаблоны'; } else { s.style.display = 'block'; b.textContent = '📂 Скрыть шаблоны'; galleryVisible = 4; renderGallery(); } }
-            function toggleCopyMenu() { document.getElementById('copyMenu').classList.toggle('active'); }
-            function toggleOpenMenu() { document.getElementById('openMenu').classList.toggle('active'); }
-            function copyCode(mode) { if (!currentHtml) { alert('Сначала создайте шаблон!'); return; } let t = ''; if (mode === 'full') t = currentHtml; else if (mode === 'body') { const m = currentHtml.match(/<body[^>]*>([\\s\\S]*)<\\/body>/i); t = m ? m[1] : currentHtml; } else if (mode === 'css') { const m = currentHtml.match(/<style[^>]*>([\\s\\S]*)<\\/style>/i); t = m ? m[1] : '/* нет */'; } navigator.clipboard.writeText(t.trim()).then(() => { alert('Скопировано!'); toggleCopyMenu(); }); }
-            function downloadHTML() { if (!currentHtml) { alert('Сначала создайте шаблон!'); return; } const b = new Blob([currentHtml], {type: 'text/html'}), u = URL.createObjectURL(b), a = document.createElement('a'); a.href = u; a.download = 'шаблон.html'; a.click(); URL.revokeObjectURL(u); }
-            function openInCodepen() {
-                if (!currentHtml) { alert('Сначала создайте шаблон!'); return; }
-                const form = document.createElement('form');
-                form.method = 'POST'; form.action = 'https://codepen.io/pen/define'; form.target = '_blank';
-                const input = document.createElement('input');
-                input.type = 'hidden'; input.name = 'data';
-                input.value = JSON.stringify({ title: 'SiteForge Template', html: currentHtml, css: '', js: '' });
-                form.appendChild(input); document.body.appendChild(form); form.submit(); document.body.removeChild(form);
-                toggleOpenMenu();
-            }
+            function toggleMenu(id) { document.getElementById(id).classList.toggle('active'); }
+            function copyCode(mode) { if (!currentHtml) { alert('Сначала создайте шаблон!'); return; } let t = ''; if (mode === 'full') t = currentHtml; else if (mode === 'body') { const m = currentHtml.match(/<body[^>]*>([\\s\\S]*)<\\/body>/i); t = m ? m[1] : currentHtml; } else if (mode === 'css') { const m = currentHtml.match(/<style[^>]*>([\\s\\S]*)<\\/style>/i); t = m ? m[1] : '/* нет */'; } navigator.clipboard.writeText(t.trim()).then(() => { alert('Скопировано!'); toggleMenu('copyMenu'); }); }
+            function downloadHTML() { if (!currentHtml) { alert('Сначала создайте шаблон!'); return; } const b = new Blob([currentHtml], {type: 'text/html'}), u = URL.createObjectURL(b), a = document.createElement('a'); a.href = u; a.download = 'шаблон.html'; a.click(); URL.revokeObjectURL(u); toggleMenu('openMenu'); }
+            function openInCodepen() { if (!currentHtml) { alert('Сначала создайте шаблон!'); return; } const f = document.createElement('form'); f.method = 'POST'; f.action = 'https://codepen.io/pen/define'; f.target = '_blank'; const i = document.createElement('input'); i.type = 'hidden'; i.name = 'data'; i.value = JSON.stringify({ title: 'SiteForge Template', html: currentHtml, css: '', js: '' }); f.appendChild(i); document.body.appendChild(f); f.submit(); document.body.removeChild(f); toggleMenu('openMenu'); }
+            function openInWordpress() { if (!currentHtml) { alert('Сначала создайте шаблон!'); return; } alert('HTML скопирован в буфер обмена. Вставьте его в редактор WordPress (блок "HTML-код").'); navigator.clipboard.writeText(currentHtml); toggleMenu('openMenu'); }
             function closePreview() { document.getElementById('preview-frame').style.display = 'none'; document.getElementById('preview-container').style.display = 'none'; currentHtml = ''; editMode = false; document.getElementById('edit-mode-btn').textContent = '✏️ Редактировать текст'; }
             function openModal(t) { document.getElementById(t + '-modal').classList.add('active'); }
             function closeModal(t) { document.getElementById(t + '-modal').classList.remove('active'); }
-            window.onclick = function(e) { if (e.target.classList.contains('modal')) e.target.classList.remove('active'); if (!e.target.closest('.copy-menu')) { document.getElementById('copyMenu').classList.remove('active'); document.getElementById('openMenu').classList.remove('active'); } }
-            document.addEventListener('mousemove', function(e) { const hint = document.getElementById('edit-hint'); if (editMode) { hint.style.left = (e.clientX + 15) + 'px'; hint.style.top = (e.clientY - 30) + 'px'; } });
+            window.onclick = function(e) { if (e.target.classList.contains('modal')) e.target.classList.remove('active'); if (!e.target.closest('.dropdown-menu')) { document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.remove('active')); } }
             renderGallery();
         </script>
     </body>
@@ -455,20 +437,19 @@ def profile_page():
                 document.getElementById('pb').textContent = (u.is_superuser ? '∞' : Math.max(0, 3 - u.generations_used)) + ' ген.';
             }
             function toggleChangePassword() {
-                const form = document.getElementById('change-pwd-form');
-                const btn = document.getElementById('pwd-toggle-btn');
-                if (form.style.display === 'block') { form.style.display = 'none'; btn.textContent = 'Сменить пароль'; }
-                else { form.style.display = 'block'; btn.textContent = 'Сменить пароль ▲'; }
+                const f = document.getElementById('change-pwd-form'), b = document.getElementById('pwd-toggle-btn');
+                if (f.style.display === 'block') { f.style.display = 'none'; b.textContent = 'Сменить пароль'; }
+                else { f.style.display = 'block'; b.textContent = 'Сменить пароль ▲'; }
             }
             async function changePassword() {
-                const oldPwd = document.getElementById('old-pwd').value, newPwd = document.getElementById('new-pwd').value, confirmPwd = document.getElementById('confirm-pwd').value, s = document.getElementById('pwd-status');
-                if (!oldPwd || !newPwd || !confirmPwd) { s.textContent = 'Заполните все поля'; return; }
-                if (newPwd !== confirmPwd) { s.textContent = '❌ Новые пароли не совпадают'; return; }
-                if (newPwd.length < 4) { s.textContent = '❌ Пароль от 4 символов'; return; }
+                const o = document.getElementById('old-pwd').value, n = document.getElementById('new-pwd').value, c = document.getElementById('confirm-pwd').value, s = document.getElementById('pwd-status');
+                if (!o || !n || !c) { s.textContent = 'Заполните все поля'; return; }
+                if (n !== c) { s.textContent = '❌ Новые пароли не совпадают'; return; }
+                if (n.length < 4) { s.textContent = '❌ Пароль от 4 символов'; return; }
                 try {
-                    const r = await fetch('/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: u.email, old_password: oldPwd, new_password: newPwd }) });
+                    const r = await fetch('/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: u.email, old_password: o, new_password: n }) });
                     const d = await r.json();
-                    if (r.ok) { s.textContent = '✅ Пароль изменён!'; localStorage.setItem('siteforge_pass', newPwd); }
+                    if (r.ok) { s.textContent = '✅ Пароль изменён!'; localStorage.setItem('siteforge_pass', n); }
                     else { s.textContent = '❌ ' + d.detail; }
                 } catch(e) { s.textContent = '❌ Ошибка'; }
             }
