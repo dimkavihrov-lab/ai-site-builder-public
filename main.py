@@ -191,6 +191,7 @@ def home():
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
             * { word-wrap: break-word; overflow-wrap: anywhere; }
+            body { min-height: 100vh; }
             #preview-frame { width: 100%; height: 70vh; border: none; border-radius: 12px; display: none; background: transparent; }
             #preview-container { display: none; margin-top: 20px; animation: fadeIn 0.3s ease; }
             @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -212,13 +213,22 @@ def home():
             .edit-btn { color: #60a5fa; text-decoration: none; font-size: 13px; cursor: pointer; background: none; border: none; }
             .edit-btn:hover { color: #93c5fd; text-decoration: none; }
             .dropdown-menu { position: relative; display: inline-block; }
-            .dropdown-content { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1e1b4b; border-radius: 12px; padding: 6px; min-width: 200px; z-index: 200; border: 1px solid rgba(255,255,255,0.15); margin-bottom: 8px; }
+            .dropdown-content { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1e1b4b; border-radius: 12px; padding: 6px; min-width: 200px; z-index: 200; border: 1px solid rgba(255,255,255,0.15); margin-bottom: 10px; max-height: 250px; overflow-y: auto; }
             .dropdown-menu.active .dropdown-content { display: block; }
             .dropdown-option { display: block; width: 100%; padding: 10px 14px; text-align: left; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: #d1d5db; font-size: 13px; cursor: pointer; border-radius: 8px; margin-bottom: 3px; transition: all 0.15s; }
             .dropdown-option:hover { background: rgba(139,92,246,0.2); color: white; border-color: #8b5cf6; }
+            /* Desktop layout */
+            @media (min-width: 768px) {
+                .max-w-2xl { max-width: 960px !important; }
+                #preview-frame { height: 75vh; }
+                #preview-container { margin-top: 0; }
+                .desktop-flex { display: flex; gap: 24px; align-items: flex-start; }
+                .desktop-form { flex: 0 0 320px; }
+                .desktop-preview { flex: 1; min-height: 70vh; }
+            }
         </style>
     </head>
-    <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white min-h-screen">
+    <body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white">
         <div class="max-w-2xl w-full px-4 mx-auto py-6">
             <div class="flex justify-between items-center mb-6">
                 <div class="flex gap-2">
@@ -234,44 +244,51 @@ def home():
                 </div>
             </div>
             <div class="text-center mb-8"><div class="text-5xl mb-2">🚀</div><h1 class="text-4xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">SiteForge</h1><p class="text-gray-400 mt-2 text-sm">Создайте HTML-шаблон за секунды</p></div>
-            <div class="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 shadow-2xl">
-                <input id="desc" type="text" placeholder="💡 Опишите шаблон, например: лендинг для кофейни" class="input-field" maxlength="500">
-                <button id="generateBtn" onclick="generate()" class="w-full p-4 btn-primary text-lg">✨ Создать шаблон</button>
-                <div class="spinner" id="spinner"></div><p id="status" class="mt-4 text-gray-400 text-xs text-center"></p>
-            </div>
-            <div id="preview-container">
-                <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
-                    <span class="text-sm text-gray-300">Предпросмотр | <button onclick="toggleEditMode()" id="edit-mode-btn" class="edit-btn">✏️ Редактировать текст</button></span>
-                    <div class="flex gap-1 flex-wrap items-center">
-                        <div class="dropdown-menu" id="copyMenu">
-                            <button onclick="toggleMenu('copyMenu')" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">📋 Копировать ▾</button>
-                            <div class="dropdown-content">
-                                <button onclick="copyCode('full')" class="dropdown-option">📄 Весь HTML</button>
-                                <button onclick="copyCode('body')" class="dropdown-option">📝 Только body</button>
-                                <button onclick="copyCode('css')" class="dropdown-option">🎨 Только стили</button>
-                                <button onclick="downloadHTML()" class="dropdown-option">💾 Скачать HTML</button>
+            
+            <div class="desktop-flex">
+                <div class="desktop-form">
+                    <div class="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 shadow-2xl">
+                        <input id="desc" type="text" placeholder="💡 Опишите шаблон" class="input-field" maxlength="500">
+                        <button id="generateBtn" onclick="generate()" class="w-full p-4 btn-primary text-lg">✨ Создать шаблон</button>
+                        <div class="spinner" id="spinner"></div><p id="status" class="mt-4 text-gray-400 text-xs text-center"></p>
+                    </div>
+                    <div id="gallery-section" style="display:none; margin-top: 20px;">
+                        <div class="flex justify-between items-center mb-4"><h2 class="text-lg font-bold">📂 Мои шаблоны</h2><button onclick="clearGallery()" class="text-xs text-gray-500 hover:text-red-400">Очистить</button></div>
+                        <div id="gallery-list"></div>
+                    </div>
+                    <div class="text-center mt-4"><button onclick="toggleGallery()" class="text-sm text-gray-400 hover:text-white transition" id="gallery-toggle">📂 Сохранённые шаблоны</button></div>
+                </div>
+                <div class="desktop-preview">
+                    <div id="preview-container">
+                        <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                            <span class="text-sm text-gray-300">Предпросмотр | <button onclick="toggleEditMode()" id="edit-mode-btn" class="edit-btn">✏️ Редактировать текст</button></span>
+                            <div class="flex gap-1 flex-wrap items-center">
+                                <div class="dropdown-menu" id="copyMenu">
+                                    <button onclick="toggleMenu('copyMenu')" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">📋 Копировать ▾</button>
+                                    <div class="dropdown-content">
+                                        <button onclick="copyCode('full')" class="dropdown-option">📄 Весь HTML</button>
+                                        <button onclick="copyCode('body')" class="dropdown-option">📝 Только body</button>
+                                        <button onclick="copyCode('css')" class="dropdown-option">🎨 Только стили</button>
+                                        <button onclick="downloadHTML()" class="dropdown-option">💾 Скачать HTML</button>
+                                    </div>
+                                </div>
+                                <div class="dropdown-menu" id="openMenu">
+                                    <button onclick="toggleMenu('openMenu')" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">🔗 Открыть в ▾</button>
+                                    <div class="dropdown-content">
+                                        <button onclick="openInCodepen()" class="dropdown-option">📝 CodePen</button>
+                                        <button onclick="openInWordpress()" class="dropdown-option">📰 WordPress</button>
+                                    </div>
+                                </div>
+                                <button onclick="closePreview()" class="text-gray-500 hover:text-red-400 text-lg px-2 leading-none transition">✕</button>
                             </div>
                         </div>
-                        <div class="dropdown-menu" id="openMenu">
-                            <button onclick="toggleMenu('openMenu')" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">🔗 Открыть в ▾</button>
-                            <div class="dropdown-content">
-                                <button onclick="openInCodepen()" class="dropdown-option">📝 CodePen</button>
-                                <button onclick="openInWordpress()" class="dropdown-option">📰 WordPress</button>
-                            </div>
-                        </div>
-                        <button onclick="closePreview()" class="text-gray-500 hover:text-red-400 text-lg px-2 leading-none transition">✕</button>
+                        <iframe id="preview-frame"></iframe>
                     </div>
                 </div>
-                <iframe id="preview-frame"></iframe>
             </div>
-            <div id="gallery-section" style="display:none; margin-top: 30px;">
-                <div class="flex justify-between items-center mb-4"><h2 class="text-lg font-bold">📂 Мои шаблоны</h2><button onclick="clearGallery()" class="text-xs text-gray-500 hover:text-red-400">Очистить</button></div>
-                <div id="gallery-list"></div>
-            </div>
-            <div class="text-center mt-4"><button onclick="toggleGallery()" class="text-sm text-gray-400 hover:text-white transition" id="gallery-toggle">📂 Сохранённые шаблоны</button></div>
         </div>
         <div id="help-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">Как пользоваться</h2><button onclick="closeModal('help')" class="text-gray-500 hover:text-red-400 text-xl">✕</button></div><div class="text-sm space-y-2"><p><strong>1.</strong> Зарегистрируйтесь или войдите.</p><p><strong>2.</strong> Опишите шаблон.</p><p><strong>3.</strong> Нажмите «Создать».</p><p><strong>4.</strong> Редактируйте, копируйте или откройте в редакторе.</p></div></div></div>
-        <div id="about-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">О нас</h2><button onclick="closeModal('about')" class="text-gray-500 hover:text-red-400 text-xl">✕</button></div><div class="text-sm space-y-2"><p><strong>SiteForge</strong> — генератор HTML-шаблонов с помощью ИИ.</p><p class="text-gray-400 mt-3">Версия: 1.5 | Сделано с ❤️</p></div></div></div>
+        <div id="about-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">О нас</h2><button onclick="closeModal('about')" class="text-gray-500 hover:text-red-400 text-xl">✕</button></div><div class="text-sm space-y-2"><p><strong>SiteForge</strong> — генератор HTML-шаблонов с помощью ИИ.</p><p class="text-gray-400 mt-3">Версия: 1.6 | Сделано с ❤️</p></div></div></div>
         <script>
             let currentHtml = '', isGenerating = false, editMode = false;
             let currentUser = JSON.parse(localStorage.getItem('siteforge_user') || 'null');
