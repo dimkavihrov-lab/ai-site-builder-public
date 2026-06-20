@@ -142,8 +142,9 @@ def generate_site(req: SiteRequest):
             "role": "system",
             "content": (
                 "Ты генератор HTML-шаблонов. Создай КРАСИВЫЙ адаптивный HTML-шаблон с Tailwind CSS (CDN). "
+                "ОБЯЗАТЕЛЬНО используй явный фон для body (например bg-gray-100, bg-white, bg-blue-50). Фон НЕ должен быть прозрачным. "
                 "Базовые секции, placeholder.com для картинок, неактивные ссылки. "
-                "Заголовки должны помещаться в одну строку, не обрезаться. Используй word-wrap: break-word; overflow-wrap: anywhere. "
+                "Заголовки должны помещаться в одну строку, не обрезаться. "
                 "Градиенты, тени, анимации. Отвечай ТОЛЬКО HTML в ```html ...```."
             )
         }, {"role": "user", "content": f"Создай шаблон: {req.description}"}],
@@ -156,7 +157,12 @@ def generate_site(req: SiteRequest):
     html = re.sub(r'(<a\b[^>]*?)href="[^"]*"', r'\1href="#"', html)
     html = re.sub(r"(<a\b[^>]*?)href='[^']*'", r"\1href='#'", html)
     html = re.sub(r'action="[^"]*"', 'action="#"', html)
-    html = html.replace('</head>', '<style>body{max-width:100vw!important;overflow-x:hidden!important}a{text-decoration:none!important;pointer-events:none;cursor:default;color:inherit}*{word-wrap:break-word!important;overflow-wrap:anywhere!important}</style></head>')
+    
+    # Принудительный фон если его нет
+    if '<body' in html and 'bg-' not in html.split('<body')[1].split('>')[0]:
+        html = html.replace('<body', '<body class="bg-gray-100"')
+    
+    html = html.replace('</head>', '<style>body{max-width:100vw!important;overflow-x:hidden!important;background:#f3f4f6!important}a{text-decoration:none!important;pointer-events:none;cursor:default;color:inherit}*{word-wrap:break-word!important;overflow-wrap:anywhere!important}</style></head>')
 
     if not user["is_superuser"]:
         conn = get_db()
@@ -209,6 +215,8 @@ def home():
             .copy-menu.active .copy-dropdown { display: block; }
             .copy-option { display: block; width: 100%; padding: 8px 12px; text-align: left; background: none; border: none; color: #d1d5db; font-size: 13px; cursor: pointer; border-radius: 8px; }
             .copy-option:hover { background: rgba(139,92,246,0.2); color: white; }
+            .edit-btn { color: #60a5fa; text-decoration: none; font-size: 13px; cursor: pointer; background: none; border: none; }
+            .edit-btn:hover { text-decoration: underline; text-decoration-color: white; }
             .editable-hint { position: absolute; background: #8b5cf6; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; pointer-events: none; display: none; z-index: 200; }
         </style>
     </head>
@@ -235,7 +243,7 @@ def home():
             </div>
             <div id="preview-container">
                 <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
-                    <span class="text-sm text-gray-300">Предпросмотр | <button onclick="toggleEditMode()" id="edit-mode-btn" class="text-purple-400 hover:underline text-xs">✏️ Редактировать текст</button></span>
+                    <span class="text-sm text-gray-300">Предпросмотр | <button onclick="toggleEditMode()" id="edit-mode-btn" class="edit-btn">✏️ Редактировать текст</button></span>
                     <div class="flex gap-1 flex-wrap items-center">
                         <button onclick="saveToGallery()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">💾 Сохранить</button>
                         <button onclick="downloadHTML()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition">📥 Скачать</button>
@@ -259,7 +267,7 @@ def home():
             <div class="text-center mt-4"><button onclick="toggleGallery()" class="text-sm text-gray-400 hover:text-white transition" id="gallery-toggle">📂 Сохранённые шаблоны</button></div>
         </div>
         <div id="help-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">Как пользоваться</h2><button onclick="closeModal('help')" class="text-gray-500 hover:text-red-400 text-xl">✕</button></div><div class="text-sm space-y-2"><p><strong>1.</strong> Зарегистрируйтесь или войдите.</p><p><strong>2.</strong> Опишите шаблон.</p><p><strong>3.</strong> Нажмите «Создать».</p><p><strong>4.</strong> Нажмите «✏️ Редактировать» и кликайте на текст.</p><p><strong>5.</strong> Скопируйте или скачайте готовый HTML.</p></div></div></div>
-        <div id="about-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">О нас</h2><button onclick="closeModal('about')" class="text-gray-500 hover:text-red-400 text-xl">✕</button></div><div class="text-sm space-y-2"><p><strong>SiteForge</strong> — генератор HTML-шаблонов с помощью ИИ.</p><p class="text-gray-400 mt-3">Версия: 1.1 | Сделано с ❤️</p></div></div></div>
+        <div id="about-modal" class="modal"><div class="modal-content"><div class="flex justify-between items-center mb-3"><h2 class="text-lg font-bold text-white">О нас</h2><button onclick="closeModal('about')" class="text-gray-500 hover:text-red-400 text-xl">✕</button></div><div class="text-sm space-y-2"><p><strong>SiteForge</strong> — генератор HTML-шаблонов с помощью ИИ.</p><p class="text-gray-400 mt-3">Версия: 1.2 | Сделано с ❤️</p></div></div></div>
         <div class="editable-hint" id="edit-hint">Нажмите на текст чтобы изменить</div>
         <script>
             let currentHtml = '', isGenerating = false, editMode = false;
@@ -301,7 +309,7 @@ def home():
                 editMode = !editMode;
                 const btn = document.getElementById('edit-mode-btn');
                 btn.textContent = editMode ? '✏️ Редактирование ВКЛ' : '✏️ Редактировать текст';
-                btn.className = editMode ? 'text-green-400 hover:underline text-xs font-bold' : 'text-purple-400 hover:underline text-xs';
+                btn.className = editMode ? 'edit-btn font-bold' : 'edit-btn';
                 document.getElementById('edit-hint').style.display = editMode ? 'block' : 'none';
                 enableEditInFrame();
             }
